@@ -11,14 +11,13 @@ case "$PORT" in
         ;;
 esac
 
-# Configure Tomcat's HTTP connector for Render.
 sed -i \
     "s/<Connector port=\"8080\"/<Connector port=\"${PORT}\"/" \
     "$CATALINA_HOME/conf/server.xml"
 
 if ! grep -q "<Connector port=\"${PORT}\"" \
     "$CATALINA_HOME/conf/server.xml"; then
-    echo "Could not configure the Tomcat HTTP port"
+    echo "Could not configure Tomcat port"
     exit 1
 fi
 
