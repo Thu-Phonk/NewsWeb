@@ -12,8 +12,11 @@ RUN mvn -B -DskipTests package
 # Stage 2: Run with Tomcat
 FROM tomcat:10.1-jdk21-temurin
 
+# Deploy NewsWeb at the domain root
+RUN rm -rf /usr/local/tomcat/webapps/ROOT
+
 COPY --from=build /app/target/NewsWeb.war \
-    /usr/local/tomcat/webapps/NewsWeb.war
+    /usr/local/tomcat/webapps/ROOT.war
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
