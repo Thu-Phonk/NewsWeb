@@ -1,0 +1,28 @@
+
+# Maven build files
+target/
+*.war
+*.class
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local configuration and logs
+*.log
+logs/
+*.bak
+
+# Operating system files
+.DS_Store
+Thumbs.db
