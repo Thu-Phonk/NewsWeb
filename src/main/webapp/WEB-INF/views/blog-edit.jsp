@@ -11,7 +11,9 @@
           content="width=device-width, initial-scale=1">
 
     <title>Edit Blog - NewsWeb</title>
-
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+    rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,6 +55,60 @@
         .error {
             color: red;
         }
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.blog-preview h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.preview-category {
+    color: #777;
+    font-size: 14px;
+}
+
+.preview-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.preview-content.ql-editor {
+    min-height: 0;
+    padding: 0;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.preview-content.ql-editor p {
+    margin-bottom: 12px;
+}
+
     </style>
 </head>
 
@@ -97,15 +153,66 @@
                required>
 
         <label for="content">Content</label>
-        <textarea id="content"
-                  name="content"
-                  minlength="10"
-                  maxlength="10000"
-                  required><c:out value="${blog.content}" /></textarea>
+        
+<!-- Plain-text compatibility -->
+<textarea id="content"
+          name="content"
+          minlength="10"
+          maxlength="10000"
+          required><c:out value="${blog.content}" /></textarea>
 
-        <button type="submit">
-            Save Changes
+<!-- Formatted content submitted to Java -->
+<input type="hidden"
+       id="contentHtml"
+       name="contentHtml">
+
+<!-- Previously saved HTML, escaped for safe transport -->
+<textarea id="initialContentHtml"
+          hidden><c:out value="${initialContentHtml}" /></textarea>
+
+<!-- Quill editor -->
+<div id="richEditor" hidden></div>
+
+
+<h2>Live Preview</h2>
+
+<section class="blog-preview">
+    <h2 id="previewTitle">Your blog title</h2>
+
+    <p id="previewCategory"
+       class="preview-category">
+        Category
+    </p>
+
+    <div id="previewContent"
+         class="preview-content ql-editor">
+        Your blog content will appear here.
+    </div>
+</section>
+
+        
+<div class="blog-actions">
+
+    <c:if test="${blog.status eq 'draft'}">
+
+        <button type="submit"
+                name="action"
+                value="draft"
+                formnovalidate
+                style="background:#666; color:white;">
+            Save Draft
         </button>
+
+    </c:if>
+
+    <button type="submit"
+            name="action"
+            value="submit"
+            style="background:#222; color:white;">
+        Submit for Review
+    </button>
+
+</div>
 
     </form>
 
@@ -116,5 +223,14 @@
     </p>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
+    defer></script>
+
 </body>
 </html>

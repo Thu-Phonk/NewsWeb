@@ -45,27 +45,40 @@
     </p>
 
     
+
 <p>
-    Create an editorial news article and
-    submit it for editor approval.
+    Create editorial articles, manage your drafts,
+    and submit finished articles for review.
 </p>
+
+<h2>Article Management</h2>
 
 <p>
     <a href="${pageContext.request.contextPath}/writer/submit">
-        Write a News Article
+        + Write New Editorial Article
     </a>
 </p>
 
 <p>
     <a href="${pageContext.request.contextPath}/writer/articles">
-        View My Editorial Articles
+        My Editorial Articles &amp; Drafts
     </a>
 </p>
 
+<h2>Public Content</h2>
 
-    <a href="${pageContext.request.contextPath}/news">
-        Back to News
+<p>
+    <a href="${pageContext.request.contextPath}/editorials">
+        View Published Editorials
     </a>
+</p>
+
+<p>
+    <a href="${pageContext.request.contextPath}/news">
+        Back to News Homepage
+    </a>
+</p>
+
 </main>
 
 </body>

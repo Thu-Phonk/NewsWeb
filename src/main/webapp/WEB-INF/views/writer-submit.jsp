@@ -12,7 +12,9 @@
           content="width=device-width, initial-scale=1">
 
     <title>Submit Article - NewsWeb</title>
-
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+    rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -64,6 +66,78 @@
 
         .success { color: green; }
         .error { color: red; }
+
+.navigation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+.nav-button {
+    display: inline-block;
+    padding: 12px 18px;
+    background: #333;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.nav-button:hover {
+    background: #555;
+}
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.blog-preview h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.preview-category {
+    color: #777;
+    font-size: 14px;
+}
+
+
+.preview-content {
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 300px;
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+.ql-toolbar.ql-snow {
+    background: #fafafa;
+}
+
+.preview-content.ql-editor {
+    min-height: 0;
+    padding: 0;
+    white-space: normal;
+}
+
+.preview-content.ql-editor p {
+    margin-bottom: 12px;
+}
+
+
     </style>
 </head>
 
@@ -105,43 +179,112 @@
 
         <label for="title">Article Title</label>
 
+<input type="text"
+       id="title"
+       name="title"
+       minlength="5"
+       maxlength="200"
+       value="<c:out value='${formTitle}' />"
+       required>
         <input type="text"
-               id="title"
-               name="title"
-               minlength="5"
-               maxlength="200"
-               required>
+       id="category"
+       name="category"
+       maxlength="60"
+       required>
 
-        <label for="category">Category</label>
+value="<c:out value='${formCategory}' />"
+<label for="content">Article Content</label>
 
-        <input type="text"
-               id="category"
-               name="category"
-               maxlength="60"
-               required>
+<!-- Plain-text compatibility and fallback -->
+<textarea id="content"
+          name="content"
+          rows="15"
+          minlength="50"
+          maxlength="20000"
+          required><c:out value="${formContent}" /></textarea>
 
-        <label for="content">Article Content</label>
+<!-- Formatted HTML submitted to the Servlet -->
+<input type="hidden"
+       id="contentHtml"
+       name="contentHtml">
 
-        <textarea id="content"
-                  name="content"
-                  rows="15"
-                  minlength="50"
-                  maxlength="20000"
-                  required></textarea>
+<!-- Restore formatting after validation errors -->
+<textarea id="initialContentHtml"
+          hidden><c:out value="${formContentHtml}" /></textarea>
 
-        <button type="submit">
-            Submit for Review
-        </button>
+<!-- Rich-text editing area -->
+<div id="richEditor" hidden></div>
+
+<h2>Live Preview</h2>
+
+<section class="blog-preview">
+
+    <h2 id="previewTitle">
+        Your article title
+    </h2>
+
+    <p id="previewCategory"
+       class="preview-category">
+        Category
+    </p>
+
+    <div id="previewContent"
+     class="preview-content ql-editor">
+        Your article content will appear here.
+    </div>
+
+</section>
+
+        
+<div class="editor-actions">
+
+    <button type="submit"
+            name="action"
+            value="draft"
+            formnovalidate
+            style="background:#666;">
+        Save Draft
+    </button>
+
+    <button type="submit"
+            name="action"
+            value="submit">
+        Submit for Review
+    </button>
+
+</div>
+
 
     </form>
 
-    <p>
-        <a href="${pageContext.request.contextPath}/writer">
-            Back to Writer Dashboard
-        </a>
-    </p>
+<div class="navigation-actions">
+
+    <a class="nav-button"
+       href="${pageContext.request.contextPath}/writer/articles">
+        &larr; My Articles &amp; Drafts
+    </a>
+
+    <a class="nav-button"
+       href="${pageContext.request.contextPath}/writer">
+        Writer Dashboard
+    </a>
+
+    <a class="nav-button"
+       href="${pageContext.request.contextPath}/editorials">
+        Published Editorials
+    </a>
+
+</div>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=3"
+    defer></script>
 
 </body>
 </html>

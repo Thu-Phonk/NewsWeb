@@ -4,6 +4,7 @@ package com.example.news.servlet;
 import com.example.news.util.BlogCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
+import com.example.news.util.RichTextUtil;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -38,6 +39,19 @@ public class BlogListServlet extends HttpServlet {
 
                 blogList.add(blog);
             }
+
+for (Document blog : blogList) {
+
+    String storedHtml = blog.getString("contentHtml");
+
+    if (storedHtml != null && !storedHtml.isBlank()) {
+
+        String safeHtml =
+                RichTextUtil.sanitize(storedHtml);
+
+        blog.put("safeContentHtml", safeHtml);
+    }
+}
 
             request.setAttribute("blogList", blogList);
 

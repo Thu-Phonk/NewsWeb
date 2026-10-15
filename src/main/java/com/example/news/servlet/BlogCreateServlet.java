@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.user.UserCollection;
 import com.example.news.util.BlogCollection;
+import com.example.news.util.RichTextUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
@@ -108,36 +109,83 @@ public class BlogCreateServlet extends HttpServlet {
             return;
         }
 
-        String title = request.getParameter("title");
-        String category = request.getParameter("category");
-        String content = request.getParameter("content");
+        
+String action = request.getParameter("action");
 
-        if (title == null || category == null || content == null) {
-            showError(request, response, "All fields are required.");
-            return;
-        }
+boolean saveDraft = "draft".equals(action);
 
-        title = title.trim();
-        category = category.trim();
-        content = content.trim();
+if (!saveDraft && !"submit".equals(action)) {
+    response.sendError(400, "Invalid blog action.");
+    return;
+}
 
-        if (title.length() < 3 || title.length() > 150) {
-            showError(request, response,
-                    "Title must be 3 to 150 characters.");
-            return;
-        }
+String title = request.getParameter("title");
+String category = request.getParameter("category");
+String content = request.getParameter("content");
 
-        if (category.length() < 2 || category.length() > 60) {
-            showError(request, response,
-                    "Category must be 2 to 60 characters.");
-            return;
-        }
+title = title == null ? "" : title.trim();
+category = category == null ? "" : category.trim();
+content = content == null ? "" : content.trim();
 
-        if (content.length() < 10 || content.length() > 10000) {
-            showError(request, response,
-                    "Content must be 10 to 10000 characters.");
-            return;
-        }
+String rawHtml = request.getParameter("contentHtml");
+
+String safeHtml = null;
+
+// An HTML character-length limit also prevents
+// excessively large incoming formatted content.
+if (rawHtml != null && !rawHtml.isBlank()) {
+
+    if (rawHtml.length() > 50000) {
+        showError(request, response,
+                "Formatted content is too large.");
+        return;
+    }
+
+    safeHtml = RichTextUtil.sanitize(rawHtml);
+
+    // Derive plain content from sanitized HTML.
+    // Do not trust the browser's separate content field.
+    content = RichTextUtil.toPlainText(safeHtml);
+}
+
+// Apply maximum lengths to both drafts and submissions.
+if (title.length() > 150 ||
+        category.length() > 60 ||
+        content.length() > 10000) {
+
+    showError(request, response,
+            "One or more fields are too long.");
+    return;
+}
+
+if (saveDraft) {
+
+    // Permit incomplete drafts, but not empty ones.
+    if (title.isEmpty() &&
+            category.isEmpty() &&
+            content.isEmpty()) {
+
+        showError(request, response,
+                "Enter something before saving a draft.");
+        return;
+    }
+
+} else {
+
+    // A submitted blog must be complete.
+    if (title.length() < 3 ||
+            category.length() < 2 ||
+            content.length() < 10) {
+
+        showError(request, response,
+                "To submit your blog, enter a title "
+                + "(at least 3 characters), "
+                + "category (at least 2 characters), "
+                + "and content (at least 10 characters).");
+        return;
+    }
+}
+
 
         try {
             Document user = loadUser(session);
@@ -153,17 +201,24 @@ public class BlogCreateServlet extends HttpServlet {
                     .append("content", content)
                     .append("authorId", user.getObjectId("_id"))
                     .append("authorName", user.getString("username"))
-                    .append("status", "pending")
-                    .append("createdAt", new Date());
+                    .append("status", saveDraft ? "draft" : "pending")
+		    .append("createdAt", new Date())
+		    .append("updatedAt", new Date());
+
+if (safeHtml != null) {
+    blog.append("contentHtml", safeHtml);
+}
 
             BlogCollection.getCollection().insertOne(blog);
 
             session.removeAttribute("blogCsrfToken");
 
             response.sendRedirect(
-                    request.getContextPath()
-                    + "/blog/create?created=1"
-            );
+        request.getContextPath()
+        + (saveDraft
+            ? "/blog/my-posts?saved=draft"
+            : "/blog/create?created=1")
+);
 
         } catch (Exception e) {
             getServletContext().log(

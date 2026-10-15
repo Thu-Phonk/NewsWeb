@@ -81,27 +81,51 @@
     <h1>News Website</h1>
     <p>Latest News</p>
 
-    <nav>
-        <a href="${pageContext.request.contextPath}/news">
-            Latest News
-        </a>
+    
+<nav>
+    <a href="${pageContext.request.contextPath}/news">
+        Latest News
+    </a>
 
-        <a href="${pageContext.request.contextPath}/blogs">
-            Community Blogs
-        </a>
+    <a href="${pageContext.request.contextPath}/editorials">
+        Editorial Articles
+    </a>
 
-        <a href="${pageContext.request.contextPath}/blog/my-posts">
-            My Posts
-        </a>
+    <a href="${pageContext.request.contextPath}/blogs">
+        Community Blogs
+    </a>
 
-        <a href="${pageContext.request.contextPath}/blog/create">
-            Write a Blog
-        </a>
+    <a href="${pageContext.request.contextPath}/blog/my-posts">
+        My Blog Posts
+    </a>
 
-        <a href="${pageContext.request.contextPath}/login">
-            Account
-        </a>
-    </nav>
+    <a href="${pageContext.request.contextPath}/blog/create">
+        Write a Blog
+    </a>
+
+    <c:if test="${canWrite}">
+    <a href="${pageContext.request.contextPath}/writer">
+        Writer Dashboard
+    </a>
+</c:if>
+
+<c:if test="${canEdit}">
+    <a href="${pageContext.request.contextPath}/editor">
+        Editor Dashboard
+    </a>
+</c:if>
+
+<c:if test="${isAdmin}">
+    <a href="${pageContext.request.contextPath}/admin/users">
+        Admin: Manage Users
+    </a>
+</c:if>
+
+    <a href="${pageContext.request.contextPath}/login">
+        Account
+    </a>
+</nav>
+
 </header>
 
 <main>
@@ -146,6 +170,12 @@
             Published Editorial Articles
         </h2>
 
+<p>
+    <a href="${pageContext.request.contextPath}/editorials">
+        Browse All Editorial Articles &rarr;
+    </a>
+</p>
+
         <c:forEach var="article"
                    items="${editorialList}">
 
@@ -166,6 +196,16 @@
                 </p>
 
                 <div class="content"><c:out value="${article.content}" /></div>
+
+<c:url var="readUrl" value="/editorial">
+    <c:param name="id" value="${article._id}" />
+</c:url>
+
+<p>
+    <a href="${readUrl}">
+        Read Full Editorial Article &rarr;
+    </a>
+</p>
 
             </article>
 

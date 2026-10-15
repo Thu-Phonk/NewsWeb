@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
+import com.example.news.util.RichTextUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
@@ -54,21 +55,38 @@ public class EditorReviewServlet extends HttpServlet {
             List<Document> pendingArticles =
                     new ArrayList<>();
 
-            for (Document article :
-                    EditorialCollection.getCollection()
-                        .find(Filters.and(
-        Filters.eq("status", "pending"),
-        Filters.exists("authorId", true),
-        Filters.ne(
-                "authorId",
-                RoleUtil.getCurrentUser(request).getObjectId("_id")
-        )
-))
-                        .sort(Sorts.ascending("createdAt"))
-                        .limit(50)) {
+            
+for (Document article :
+        EditorialCollection.getCollection()
+            .find(Filters.and(
+                Filters.eq("status", "pending"),
+                Filters.exists("authorId", true),
+                Filters.ne(
+                    "authorId",
+                    RoleUtil.getCurrentUser(request)
+                        .getObjectId("_id")
+                )
+            ))
+            .sort(Sorts.ascending("createdAt"))
+            .limit(50)) {
 
-                pendingArticles.add(article);
-            }
+    // Retrieve formatted article content.
+    String storedHtml =
+            article.getString("contentHtml");
+
+    // Only prepare HTML if the article contains it.
+    if (storedHtml != null && !storedHtml.isBlank()) {
+
+        // Sanitize the HTML before displaying it.
+        String safeHtml =
+                RichTextUtil.sanitize(storedHtml);
+
+        article.put("safeContentHtml", safeHtml);
+    }
+
+    pendingArticles.add(article);
+}
+
 
             request.setAttribute(
                     "pendingArticles", pendingArticles

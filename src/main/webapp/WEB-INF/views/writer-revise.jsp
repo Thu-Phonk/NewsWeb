@@ -12,6 +12,10 @@
 
     <title>Revise Article - NewsWeb</title>
 
+    <link
+        href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+        rel="stylesheet">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -40,6 +44,20 @@
             padding: 12px;
         }
 
+        #content {
+            min-height: 250px;
+        }
+
+        #richEditor {
+            background: white;
+        }
+
+        #richEditor .ql-editor {
+            min-height: 300px;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
         button {
             margin-top: 20px;
             padding: 12px 20px;
@@ -54,9 +72,37 @@
             background: #fff1f1;
             border-left: 4px solid #ba3030;
             padding: 15px;
+            border-radius: 5px;
         }
 
-        .error { color: red; }
+        .error {
+            color: #b00020;
+        }
+
+        .blog-preview {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .preview-category {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .preview-content.ql-editor {
+            min-height: 0;
+            padding: 0;
+            white-space: normal;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .navigation {
+            margin-top: 25px;
+        }
     </style>
 </head>
 
@@ -66,12 +112,13 @@
     <h1>Revise Editorial Article</h1>
 
     <p>
-        Your revised article will be sent
-        back for editor review.
+        Edit your rejected article and submit it
+        for another editorial review.
     </p>
 
     <div class="feedback">
         <strong>Editor's Previous Feedback</strong>
+
         <p>
             <c:out value="${article.rejectionReason}"
                    default="No feedback provided." />
@@ -95,7 +142,7 @@
                name="csrfToken"
                value="<c:out value='${sessionScope.revisionCsrfToken}' />">
 
-        <label for="title">Title</label>
+        <label for="title">Article Title</label>
 
         <input type="text"
                id="title"
@@ -115,8 +162,9 @@
                value="<c:out value='${article.category}' />"
                required>
 
-        <label for="content">Content</label>
+        <label for="content">Article Content</label>
 
+        <!-- Plain-text fallback -->
         <textarea id="content"
                   name="content"
                   rows="15"
@@ -124,17 +172,59 @@
                   maxlength="20000"
                   required><c:out value="${article.content}" /></textarea>
 
+        <!-- Formatted content for Java -->
+        <input type="hidden"
+               id="contentHtml"
+               name="contentHtml">
+
+        <!-- Existing sanitized formatting -->
+        <textarea id="initialContentHtml"
+                  hidden><c:out value="${initialContentHtml}" /></textarea>
+
+        <!-- Quill rich-text editor -->
+        <div id="richEditor" hidden></div>
+
+        <h2>Live Preview</h2>
+
+        <section class="blog-preview">
+
+            <h2 id="previewTitle">
+                Your article title
+            </h2>
+
+            <p id="previewCategory"
+               class="preview-category">
+                Category
+            </p>
+
+            <div id="previewContent"
+                 class="preview-content ql-editor">
+                Your article content will appear here.
+            </div>
+
+        </section>
+
         <button type="submit">
             Resubmit for Review
         </button>
+
     </form>
 
-    <p>
+    <div class="navigation">
         <a href="${pageContext.request.contextPath}/writer/articles">
-            Back to My Editorial Articles
+            &larr; Back to My Editorial Articles
         </a>
-    </p>
+    </div>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=3"
+    defer></script>
+
 </body>
 </html>

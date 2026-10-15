@@ -12,6 +12,10 @@
 
     <title>Create Blog - NewsWeb</title>
 
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+    rel="stylesheet">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,6 +52,74 @@
 
         .success { color: green; }
         .error { color: red; }
+
+.blog-preview {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.blog-preview h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.preview-category {
+    color: #777;
+    font-size: 14px;
+}
+
+.preview-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.ql-toolbar.ql-snow {
+    background: #fafafa;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.preview-content.ql-editor {
+    min-height: 0;
+    padding: 0;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.preview-content.ql-editor p {
+    margin-bottom: 12px;
+}
+
     </style>
 </head>
 
@@ -100,16 +172,58 @@
                required>
 
         <label for="content">Blog Content</label>
-        <textarea id="content"
-                  name="content"
-                  rows="12"
-                  minlength="10"
-                  maxlength="10000"
-                  required></textarea>
+        
+<!-- Plain-text fallback for compatibility -->
+<textarea id="content"
+          name="content"
+          rows="12"
+          maxlength="10000"
+          required></textarea>
 
-        <button type="submit">
-            Publish Blog
-        </button>
+<!-- New formatted article content -->
+<input type="hidden"
+       id="contentHtml"
+       name="contentHtml">
+
+<!-- Quill editor appears here when JavaScript loads -->
+<div id="richEditor" hidden></div>
+
+
+<h2>Live Preview</h2>
+
+<section class="blog-preview" aria-live="polite">
+    <h2 id="previewTitle">Your blog title</h2>
+
+    <p class="preview-category"
+       id="previewCategory">
+        Category
+    </p>
+
+    <div id="previewContent"
+         class="preview-content">
+        Your blog content will appear here.
+    </div>
+</section>
+
+        
+<div class="blog-actions">
+
+    <button type="submit"
+            name="action"
+            value="draft"
+            formnovalidate
+            style="background:#666; color:white;">
+        Save Draft
+    </button>
+
+    <button type="submit"
+            name="action"
+            value="submit"
+            style="background:#222; color:white;">
+        Submit for Review
+    </button>
+
+</div>
 
     </form>
 
@@ -124,5 +238,14 @@
     </a>
 </p>
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
+    defer></script>
+
 </body>
 </html>

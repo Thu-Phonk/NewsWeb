@@ -44,11 +44,49 @@
             font-size: 14px;
         }
 
-        .content {
-            line-height: 1.7;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
+        
+.content {
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.content p {
+    margin: 0 0 14px;
+}
+
+.content h2,
+.content h3 {
+    margin-top: 22px;
+    margin-bottom: 12px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 28px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 28px;
+}
+
+.content blockquote {
+    border-left: 4px solid #999;
+    margin: 18px 0;
+    padding: 8px 18px;
+    background: #f7f7f7;
+    font-style: italic;
+}
+
+.content a {
+    color: #1565c0;
+    text-decoration: underline;
+}
+
+.plain-content {
+    white-space: pre-wrap;
+}
+
 
         nav a {
             color: white;
@@ -123,7 +161,26 @@
                         <c:out value="${blog.authorName}" />
                     </p>
 
-                    <div class="content"><c:out value="${blog.content}" /></div>
+                    
+<div class="content">
+
+    <c:choose>
+
+        <c:when test="${not empty blog.safeContentHtml}">
+            <c:out value="${blog.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <c:otherwise>
+            <div class="plain-content">
+                <c:out value="${blog.content}" />
+            </div>
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
                 </article>
 

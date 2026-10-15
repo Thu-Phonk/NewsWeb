@@ -43,11 +43,52 @@
             font-size: 14px;
         }
 
-        .content {
-            line-height: 1.7;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
+        
+.content {
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.content p {
+    margin: 0 0 14px;
+}
+
+.content h2 {
+    font-size: 24px;
+    margin: 22px 0 12px;
+}
+
+.content h3 {
+    font-size: 20px;
+    margin: 18px 0 10px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 28px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 28px;
+}
+
+.content blockquote {
+    border-left: 4px solid #999;
+    background: #f7f7f7;
+    padding: 10px 18px;
+    margin: 18px 0;
+    font-style: italic;
+}
+
+.content a {
+    color: #1565c0;
+    text-decoration: underline;
+}
+
+.plain-content {
+    white-space: pre-wrap;
+}
 
         textarea {
             box-sizing: border-box;
@@ -74,21 +115,26 @@
 
 <body>
 
+
 <header>
     <h1>Editor Dashboard</h1>
     <p>Review Submitted Articles</p>
 
-    <a href="${pageContext.request.contextPath}/news"
-       style="color:white;">
-        Back to News
-    </a>
+    <nav>
+        <a href="${pageContext.request.contextPath}/news"
+           style="color:white; margin-right:20px;">
+            Back to News
+        </a>
+
+        <a href="${pageContext.request.contextPath}/editor/blogs"
+           style="color:white;">
+            Review Community Blogs
+        </a>
+    </nav>
 </header>
-<p>
-    <a href="${pageContext.request.contextPath}/editor/blogs"
-       style="color:white;">
-        Review Community Blogs
-    </a>
-</p>
+
+<main>
+
 <main>
 
     <c:if test="${param.reviewed eq 'approved'}">
@@ -138,7 +184,28 @@
                         <c:out value="${article.status}" />
                     </p>
 
-                    <div class="content"><c:out value="${article.content}" /></div>
+                    
+<div class="content">
+
+    <c:choose>
+
+        <%-- New articles with sanitized rich-text content --%>
+        <c:when test="${not empty article.safeContentHtml}">
+            <c:out value="${article.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <%-- Older articles stored as plain text --%>
+        <c:otherwise>
+            <div class="plain-content">
+                <c:out value="${article.content}" />
+            </div>
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
                     <hr>
 

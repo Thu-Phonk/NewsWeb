@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.user.UserCollection;
 import com.example.news.util.BlogCollection;
+import com.example.news.util.RichTextUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
@@ -65,18 +66,34 @@ public class MyBlogServlet extends HttpServlet {
                 return;
             }
 
-            List<Document> myBlogs = new ArrayList<>();
+            
+List<Document> myBlogs = new ArrayList<>();
 
-            // Only return blogs owned by this user.
-            for (Document blog : BlogCollection.getCollection()
-                    .find(Filters.eq("authorId", authorId))
-                    .sort(Sorts.descending("createdAt"))
-                    .limit(50)) {
+// Only return blogs owned by this user.
+for (Document blog : BlogCollection.getCollection()
+        .find(Filters.eq("authorId", authorId))
+        .sort(Sorts.descending("createdAt"))
+        .limit(50)) {
 
-                myBlogs.add(blog);
-            }
+    // Retrieve formatted HTML saved in MongoDB.
+    String storedHtml = blog.getString("contentHtml");
 
-            request.setAttribute("myBlogs", myBlogs);
+    if (storedHtml != null && !storedHtml.isBlank()) {
+
+        // Sanitize HTML before displaying it.
+        String safeHtml =
+                RichTextUtil.sanitize(storedHtml);
+
+        // Store the sanitized version for the JSP.
+        blog.put("safeContentHtml", safeHtml);
+    }
+
+    myBlogs.add(blog);
+}
+
+// Send the list to my-posts.jsp.
+request.setAttribute("myBlogs", myBlogs);
+
 // Generate a CSRF token for deleting blog posts.
 if (session.getAttribute("blogDeleteCsrfToken") == null) {
     session.setAttribute(

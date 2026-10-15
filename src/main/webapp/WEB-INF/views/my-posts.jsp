@@ -53,10 +53,23 @@
         }
 
         .content {
-            line-height: 1.6;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+.content p {
+    margin: 0 0 12px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 24px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 24px;
+}
 
         .button {
             display: inline-block;
@@ -96,12 +109,20 @@
 </header>
 
 <main>
+
+<c:if test="${param.saved eq 'draft'}">
+    <p style="color:green; font-weight:bold;">
+        Your blog draft was saved successfully!
+    </p>
+</c:if>
+
 <c:if test="${param.updated eq '1'}">
     <p style="color:green;">
         Your changes were saved.
         The blog is now pending editor review.
     </p>
 </c:if>
+
     <a class="button"
        href="${pageContext.request.contextPath}/blog/create">
         + Create New Post
@@ -139,7 +160,32 @@
                         <c:out value="${blog.status}" />
                     </p>
 
-                    <div class="content"><c:out value="${blog.content}" /></div>
+<c:if test="${blog.status eq 'draft'}">
+    <p style="color:#555;">
+        This blog is a private draft.
+        Only you can access and edit it.
+        Submit it when you are ready for editor review.
+    </p>
+</c:if>
+
+
+<div class="content">
+
+    <c:choose>
+
+        <c:when test="${not empty blog.safeContentHtml}">
+            <c:out value="${blog.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <c:otherwise>
+            <c:out value="${blog.content}" />
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
 <c:if test="${blog.status eq 'pending'}">
     <p style="color:#996300;">
@@ -171,9 +217,18 @@
         <c:param name="id" value="${blog._id}" />
     </c:url>
 
-    <a class="button" href="${editUrl}">
-        Edit Post
-    </a>
+    
+<a class="button" href="${editUrl}">
+    <c:choose>
+        <c:when test="${blog.status eq 'draft'}">
+            Edit Draft
+        </c:when>
+        <c:otherwise>
+            Edit Post
+        </c:otherwise>
+    </c:choose>
+</a>
+
 </p>
 
 <form action="${pageContext.request.contextPath}/blog/delete"

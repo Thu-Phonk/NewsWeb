@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
+import com.example.news.util.RichTextUtil;
 
 import org.bson.Document;
 
@@ -70,7 +71,20 @@ public class WriterArticleServlet extends HttpServlet {
                 return;
             }
 
+String action = request.getParameter("action");
+
+boolean saveDraft = "draft".equals(action);
+
+if (!saveDraft && !"submit".equals(action)) {
+    response.sendError(400, "Invalid article action.");
+    return;
+}
+
             HttpSession session = request.getSession(false);
+if (session == null) {
+    response.sendError(403, "Session expired.");
+    return;
+}
 
             String expected = (String)
                     session.getAttribute("articleCsrfToken");
@@ -86,43 +100,71 @@ public class WriterArticleServlet extends HttpServlet {
                 return;
             }
 
-            String title = request.getParameter("title");
-            String category = request.getParameter("category");
-            String content = request.getParameter("content");
+            
+String title = request.getParameter("title");
+String category = request.getParameter("category");
+String content = request.getParameter("content");
 
-            if (title == null || category == null ||
-                    content == null) {
+title = title == null ? "" : title.trim();
+category = category == null ? "" : category.trim();
+content = content == null ? "" : content.trim();
 
-                showError(request, response,
-                        "All fields are required.");
-                return;
-            }
+String rawHtml = request.getParameter("contentHtml");
+String safeHtml = null;
 
-            title = title.trim();
-            category = category.trim();
-            content = content.trim();
+if (rawHtml != null && !rawHtml.isBlank()) {
 
-            if (title.length() < 5 || title.length() > 200) {
-                showError(request, response,
-                        "Title must be 5 to 200 characters.");
-                return;
-            }
+    // Limit incoming HTML size before processing.
+    if (rawHtml.length() > 100000) {
+        showError(request, response,
+                "Formatted article content is too large.");
+        return;
+    }
 
-            if (category.length() < 2 ||
-                    category.length() > 60) {
+    // Remove unsafe HTML, attributes and URLs.
+    safeHtml = RichTextUtil.sanitize(rawHtml);
 
-                showError(request, response,
-                        "Category must be 2 to 60 characters.");
-                return;
-            }
+    // Derive searchable plain text from the safe HTML.
+    content = RichTextUtil.toPlainText(safeHtml);
+}
 
-            if (content.length() < 50 ||
-                    content.length() > 20000) {
+// Maximum lengths apply to both drafts and submissions.
+if (title.length() > 200
+        || category.length() > 60
+        || content.length() > 20000) {
 
-                showError(request, response,
-                        "Content must be 50 to 20000 characters.");
-                return;
-            }
+    showError(request, response,
+            "One or more fields exceed the maximum length.");
+    return;
+}
+
+if (saveDraft) {
+
+    // Avoid creating completely empty drafts.
+    if (title.isEmpty() && category.isEmpty()
+            && content.isEmpty()) {
+
+        showError(request, response,
+                "Enter some content before saving a draft.");
+        return;
+    }
+
+} else {
+
+    // Full validation is required for editor submission.
+    if (title.length() < 5
+            || category.length() < 2
+            || content.length() < 50) {
+
+        showError(request, response,
+                "To submit an article, enter a title "
+                + "(at least 5 characters), category "
+                + "(at least 2 characters), and content "
+                + "(at least 50 characters).");
+        return;
+    }
+}
+
 
             // Retrieve identity and current role from MongoDB.
             Document user = RoleUtil.getCurrentUser(request);
@@ -142,19 +184,23 @@ public class WriterArticleServlet extends HttpServlet {
                     .append("content", content)
                     .append("authorId", user.getObjectId("_id"))
                     .append("authorName", user.getString("username"))
-                    .append("status", "pending")
+                    .append("status", saveDraft ? "draft" : "pending")
                     .append("createdAt", now)
                     .append("updatedAt", now);
-
+if (safeHtml != null) {
+    article.append("contentHtml", safeHtml);
+}
             EditorialCollection.getCollection()
                     .insertOne(article);
 
             session.removeAttribute("articleCsrfToken");
 
             response.sendRedirect(
-                    request.getContextPath()
-                    + "/writer/submit?submitted=1"
-            );
+        request.getContextPath()
+        + (saveDraft
+            ? "/writer/articles?saved=draft"
+            : "/writer/submit?submitted=1")
+);
 
         } catch (Exception e) {
             getServletContext().log(
