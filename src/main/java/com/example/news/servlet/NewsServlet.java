@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.util.NewsCollection;
 import com.example.news.util.EditorialCollection;
+import com.example.news.util.RoleUtil;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
@@ -30,6 +31,8 @@ public class NewsServlet extends HttpServlet {
     ) throws ServletException, IOException {
 
         try {
+
+            // Load regular news.
             MongoCollection<Document> collection =
                     NewsCollection.getCollection();
 
@@ -41,29 +44,51 @@ public class NewsServlet extends HttpServlet {
                 newsList.add(news);
             }
 
-            List<Document> editorialList =
-                    new ArrayList<>();
+            // Load published editorial articles only.
+            List<Document> editorialList = new ArrayList<>();
 
-            // Only approved/published editorial articles
-            // are visible to the public.
             for (Document article :
                     EditorialCollection.getCollection()
-                        .find(Filters.eq("status", "published"))
-                        .sort(Sorts.descending("reviewedAt"))
-                        .limit(50)) {
+                            .find(Filters.eq("status", "published"))
+                            .sort(Sorts.descending("reviewedAt"))
+                            .limit(50)) {
 
                 editorialList.add(article);
             }
 
             request.setAttribute("newsList", newsList);
-            request.setAttribute(
-                    "editorialList", editorialList
-            );
+            request.setAttribute("editorialList", editorialList);
+
+            // Determine which dashboard links the user may see.
+            Document currentUser = RoleUtil.getCurrentUser(request);
+
+            boolean canWrite = currentUser != null
+                    && RoleUtil.hasRole(
+                            currentUser,
+                            "writer", "editor", "administrator"
+                    );
+
+            boolean canEdit = currentUser != null
+                    && RoleUtil.hasRole(
+                            currentUser,
+                            "editor", "administrator"
+                    );
+
+            boolean isAdmin = currentUser != null
+                    && RoleUtil.hasRole(
+                            currentUser,
+                            "administrator"
+                    );
+
+            request.setAttribute("canWrite", canWrite);
+            request.setAttribute("canEdit", canEdit);
+            request.setAttribute("isAdmin", isAdmin);
 
             request.getRequestDispatcher("/news.jsp")
                     .forward(request, response);
 
         } catch (Exception e) {
+
             getServletContext().log(
                     "Unable to load news.", e
             );

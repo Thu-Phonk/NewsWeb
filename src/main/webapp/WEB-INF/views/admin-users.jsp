@@ -75,28 +75,14 @@
             font-size: 14px;
         }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
 
-<header>
-    <h1>Administrator Dashboard</h1>
-    <p>NewsWeb User Management</p>
-
-    <nav>
-        <a href="${pageContext.request.contextPath}/news">
-            News
-        </a>
-
-        <a href="${pageContext.request.contextPath}/editor">
-            Editorial Reviews
-        </a>
-
-        <a href="${pageContext.request.contextPath}/editor/blogs">
-            Blog Moderation
-        </a>
-    </nav>
-</header>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 
 <main>
 

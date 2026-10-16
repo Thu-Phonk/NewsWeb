@@ -16,10 +16,28 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Locale;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String LOGIN_TOKEN_KEY = "loginCsrfToken";
+
+    private void prepareLoginToken(HttpServletRequest request) {
+        HttpSession session = request.getSession(true);
+        if (session.getAttribute(LOGIN_TOKEN_KEY) == null) {
+            byte[] random = new byte[24];
+            RANDOM.nextBytes(random);
+            session.setAttribute(LOGIN_TOKEN_KEY,
+                    Base64.getUrlEncoder().withoutPadding().encodeToString(random));
+        }
+    }
+
 
     @Override
     protected void doGet(
@@ -28,6 +46,7 @@ public class LoginServlet extends HttpServlet {
     ) throws ServletException, IOException {
 
         response.setHeader("Cache-Control", "no-store");
+        prepareLoginToken(request);
 
         request.getRequestDispatcher(
                 "/WEB-INF/views/login.jsp"
@@ -41,6 +60,15 @@ public class LoginServlet extends HttpServlet {
     ) throws ServletException, IOException {
 
         request.setCharacterEncoding("UTF-8");
+        HttpSession csrfSession = request.getSession(false);
+        Object expected = csrfSession == null ? null : csrfSession.getAttribute(LOGIN_TOKEN_KEY);
+        String supplied = request.getParameter("csrfToken");
+        if (!(expected instanceof String known) || supplied == null ||
+                !MessageDigest.isEqual(known.getBytes(StandardCharsets.UTF_8),
+                        supplied.getBytes(StandardCharsets.UTF_8))) {
+            response.sendError(403, "Invalid login form token.");
+            return;
+        }
 
         String loginName = request.getParameter("username");
         String password = request.getParameter("password");
@@ -141,6 +169,7 @@ public class LoginServlet extends HttpServlet {
             HttpServletResponse response
     ) throws ServletException, IOException {
 
+        prepareLoginToken(request);
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setHeader("Cache-Control", "no-store");
 

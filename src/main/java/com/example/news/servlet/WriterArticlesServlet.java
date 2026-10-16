@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
+import com.example.news.util.RichTextUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
@@ -61,17 +62,30 @@ public class WriterArticlesServlet extends HttpServlet {
 
             // The author ID comes from the authenticated user,
             // never from a browser query parameter.
-            for (Document article :
-                    EditorialCollection.getCollection()
-                        .find(Filters.eq(
-                                "authorId",
-                                user.getObjectId("_id")
-                        ))
-                        .sort(Sorts.descending("createdAt"))
-                        .limit(100)) {
+            
+for (Document article :
+        EditorialCollection.getCollection()
+            .find(Filters.eq(
+                    "authorId",
+                    user.getObjectId("_id")
+            ))
+            .sort(Sorts.descending("createdAt"))
+            .limit(100)) {
 
-                articles.add(article);
-            }
+    // Get saved rich-text content.
+    String storedHtml = article.getString("contentHtml");
+
+    if (storedHtml != null && !storedHtml.isBlank()) {
+
+        // Sanitize again before rendering.
+        String safeHtml =
+                RichTextUtil.sanitize(storedHtml);
+
+        article.put("safeContentHtml", safeHtml);
+    }
+
+    articles.add(article);
+}
 
             request.setAttribute("articles", articles);
             request.setAttribute(

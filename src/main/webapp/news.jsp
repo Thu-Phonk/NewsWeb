@@ -73,36 +73,14 @@
             margin-top: 35px;
         }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
 
-<header>
-    <h1>News Website</h1>
-    <p>Latest News</p>
-
-    <nav>
-        <a href="${pageContext.request.contextPath}/news">
-            Latest News
-        </a>
-
-        <a href="${pageContext.request.contextPath}/blogs">
-            Community Blogs
-        </a>
-
-        <a href="${pageContext.request.contextPath}/blog/my-posts">
-            My Posts
-        </a>
-
-        <a href="${pageContext.request.contextPath}/blog/create">
-            Write a Blog
-        </a>
-
-        <a href="${pageContext.request.contextPath}/login">
-            Account
-        </a>
-    </nav>
-</header>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 
 <main>
 
@@ -146,6 +124,12 @@
             Published Editorial Articles
         </h2>
 
+<p>
+    <a href="${pageContext.request.contextPath}/editorials">
+        Browse All Editorial Articles &rarr;
+    </a>
+</p>
+
         <c:forEach var="article"
                    items="${editorialList}">
 
@@ -166,6 +150,16 @@
                 </p>
 
                 <div class="content"><c:out value="${article.content}" /></div>
+
+<c:url var="readUrl" value="/editorial">
+    <c:param name="id" value="${article._id}" />
+</c:url>
+
+<p>
+    <a href="${readUrl}">
+        Read Full Editorial Article &rarr;
+    </a>
+</p>
 
             </article>
 

@@ -25,9 +25,13 @@
             border-radius: 8px;
         }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 
 <main>
     <h1>Writer Dashboard</h1>
@@ -45,27 +49,40 @@
     </p>
 
     
+
 <p>
-    Create an editorial news article and
-    submit it for editor approval.
+    Create editorial articles, manage your drafts,
+    and submit finished articles for review.
 </p>
+
+<h2>Article Management</h2>
 
 <p>
     <a href="${pageContext.request.contextPath}/writer/submit">
-        Write a News Article
+        + Write New Editorial Article
     </a>
 </p>
 
 <p>
     <a href="${pageContext.request.contextPath}/writer/articles">
-        View My Editorial Articles
+        My Editorial Articles &amp; Drafts
     </a>
 </p>
 
+<h2>Public Content</h2>
 
-    <a href="${pageContext.request.contextPath}/news">
-        Back to News
+<p>
+    <a href="${pageContext.request.contextPath}/editorials">
+        View Published Editorials
     </a>
+</p>
+
+<p>
+    <a href="${pageContext.request.contextPath}/news">
+        Back to News Homepage
+    </a>
+</p>
+
 </main>
 
 </body>

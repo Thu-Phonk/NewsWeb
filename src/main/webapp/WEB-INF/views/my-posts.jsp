@@ -53,10 +53,23 @@
         }
 
         .content {
-            line-height: 1.6;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+.content p {
+    margin: 0 0 12px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 24px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 24px;
+}
 
         .button {
             display: inline-block;
@@ -67,41 +80,42 @@
             border-radius: 5px;
             margin-bottom: 20px;
         }
+
+.post-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
 
-<header>
-    <h1>My Blog Posts</h1>
-
-    <p>
-        Welcome,
-        <c:out value="${sessionScope.username}" />
-    </p>
-
-    <nav>
-        <a href="${pageContext.request.contextPath}/news">
-            News
-        </a>
-
-        <a href="${pageContext.request.contextPath}/blogs">
-            Community Blogs
-        </a>
-
-        <a href="${pageContext.request.contextPath}/blog/my-posts">
-            My Posts
-        </a>
-    </nav>
-</header>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 
 <main>
+
+<c:if test="${param.saved eq 'draft'}">
+    <p style="color:green; font-weight:bold;">
+        Your blog draft was saved successfully!
+    </p>
+</c:if>
+
 <c:if test="${param.updated eq '1'}">
     <p style="color:green;">
         Your changes were saved.
         The blog is now pending editor review.
     </p>
 </c:if>
+
     <a class="button"
        href="${pageContext.request.contextPath}/blog/create">
         + Create New Post
@@ -125,6 +139,15 @@
 
                 <article class="post">
 
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img src="<c:out value='${blog.coverImageUrl}' />"
+         alt="Cover image for this blog"
+         loading="lazy"
+         class="post-cover">
+
+</c:if>
+
                     <h2>
                         <c:out value="${blog.title}" />
                     </h2>
@@ -139,7 +162,32 @@
                         <c:out value="${blog.status}" />
                     </p>
 
-                    <div class="content"><c:out value="${blog.content}" /></div>
+<c:if test="${blog.status eq 'draft'}">
+    <p style="color:#555;">
+        This blog is a private draft.
+        Only you can access and edit it.
+        Submit it when you are ready for editor review.
+    </p>
+</c:if>
+
+
+<div class="content">
+
+    <c:choose>
+
+        <c:when test="${not empty blog.safeContentHtml}">
+            <c:out value="${blog.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <c:otherwise>
+            <c:out value="${blog.content}" />
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
 <c:if test="${blog.status eq 'pending'}">
     <p style="color:#996300;">
@@ -171,9 +219,18 @@
         <c:param name="id" value="${blog._id}" />
     </c:url>
 
-    <a class="button" href="${editUrl}">
-        Edit Post
-    </a>
+    
+<a class="button" href="${editUrl}">
+    <c:choose>
+        <c:when test="${blog.status eq 'draft'}">
+            Edit Draft
+        </c:when>
+        <c:otherwise>
+            Edit Post
+        </c:otherwise>
+    </c:choose>
+</a>
+
 </p>
 
 <form action="${pageContext.request.contextPath}/blog/delete"

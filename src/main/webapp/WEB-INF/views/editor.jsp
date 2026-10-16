@@ -43,11 +43,52 @@
             font-size: 14px;
         }
 
-        .content {
-            line-height: 1.7;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
+        
+.content {
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.content p {
+    margin: 0 0 14px;
+}
+
+.content h2 {
+    font-size: 24px;
+    margin: 22px 0 12px;
+}
+
+.content h3 {
+    font-size: 20px;
+    margin: 18px 0 10px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 28px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 28px;
+}
+
+.content blockquote {
+    border-left: 4px solid #999;
+    background: #f7f7f7;
+    padding: 10px 18px;
+    margin: 18px 0;
+    font-style: italic;
+}
+
+.content a {
+    color: #1565c0;
+    text-decoration: underline;
+}
+
+.plain-content {
+    white-space: pre-wrap;
+}
 
         textarea {
             box-sizing: border-box;
@@ -69,26 +110,28 @@
         .approve { background: #237a39; }
         .reject { background: #ba3030; }
         .success { color: green; }
+
+.editorial-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
 
-<header>
-    <h1>Editor Dashboard</h1>
-    <p>Review Submitted Articles</p>
 
-    <a href="${pageContext.request.contextPath}/news"
-       style="color:white;">
-        Back to News
-    </a>
-</header>
-<p>
-    <a href="${pageContext.request.contextPath}/editor/blogs"
-       style="color:white;">
-        Review Community Blogs
-    </a>
-</p>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
+
 <main>
 
     <c:if test="${param.reviewed eq 'approved'}">
@@ -117,11 +160,22 @@
             <c:forEach var="article"
                        items="${pendingArticles}">
 
-                <div class="article">
+                
+<div class="article">
 
-                    <h2>
-                        <c:out value="${article.title}" />
-                    </h2>
+    <%-- Show the submitted cover to the editor --%>
+    <c:if test="${not empty article.coverImageUrl}">
+        <img
+            src="<c:out value='${article.coverImageUrl}' />"
+            alt="Submitted article cover"
+            class="editorial-cover"
+            loading="lazy">
+    </c:if>
+
+    <h2>
+        <c:out value="${article.title}" />
+    </h2>
+
 
                     <p class="meta">
                         Category:
@@ -138,7 +192,28 @@
                         <c:out value="${article.status}" />
                     </p>
 
-                    <div class="content"><c:out value="${article.content}" /></div>
+                    
+<div class="content">
+
+    <c:choose>
+
+        <%-- New articles with sanitized rich-text content --%>
+        <c:when test="${not empty article.safeContentHtml}">
+            <c:out value="${article.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <%-- Older articles stored as plain text --%>
+        <c:otherwise>
+            <div class="plain-content">
+                <c:out value="${article.content}" />
+            </div>
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
                     <hr>
 

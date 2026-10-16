@@ -70,6 +70,20 @@
             <version>0.10.2</version>
         </dependency>
 
+<!-- Sanitize rich-text HTML to prevent XSS -->
+<dependency>
+    <groupId>org.jsoup</groupId>
+    <artifactId>jsoup</artifactId>
+    <version>1.23.2</version>
+</dependency>
+
+<!-- Cloudinary Java SDK for persistent image uploads -->
+<dependency>
+    <groupId>com.cloudinary</groupId>
+    <artifactId>cloudinary-http5</artifactId>
+    <version>2.4.0</version>
+</dependency>
+
     </dependencies>
 
     <build>

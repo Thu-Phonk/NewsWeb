@@ -11,7 +11,9 @@
           content="width=device-width, initial-scale=1">
 
     <title>Edit Blog - NewsWeb</title>
-
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+    rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,10 +55,87 @@
         .error {
             color: red;
         }
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.blog-preview h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.preview-category {
+    color: #777;
+    font-size: 14px;
+}
+
+.preview-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.preview-content.ql-editor {
+    min-height: 0;
+    padding: 0;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.preview-content.ql-editor p {
+    margin-bottom: 12px;
+}
+
+.preview-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.preview-cover[hidden] {
+    display: none;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 <main>
 
     <h1>Edit Blog Post</h1>
@@ -67,8 +146,11 @@
         </p>
     </c:if>
 
-    <form action="${pageContext.request.contextPath}/blog/edit"
-          method="post">
+    
+<form action="${pageContext.request.contextPath}/blog/edit"
+      method="post"
+      enctype="multipart/form-data">
+
 
         <input type="hidden"
                name="id"
@@ -96,16 +178,106 @@
                value="<c:out value='${blog.category}' />"
                required>
 
-        <label for="content">Content</label>
-        <textarea id="content"
-                  name="content"
-                  minlength="10"
-                  maxlength="10000"
-                  required><c:out value="${blog.content}" /></textarea>
+<label for="coverImage">Replace Cover Image (Optional)</label>
 
-        <button type="submit">
-            Save Changes
+<input type="file"
+       id="coverImage"
+       name="coverImage"
+       accept="image/jpeg,image/png">
+
+<p style="color:#666; font-size:13px;">
+    JPEG or PNG, maximum 5 MB.
+    Leave empty to keep the current image.
+</p>
+
+<c:if test="${not empty blog.coverImageUrl}">
+    <label>
+        <input type="checkbox"
+               id="removeCover"
+               name="removeCover"
+               value="true">
+        Remove the current cover image
+    </label>
+</c:if>
+
+        <label for="content">Content</label>
+        
+<!-- Plain-text compatibility -->
+<textarea id="content"
+          name="content"
+          minlength="10"
+          maxlength="10000"
+          required><c:out value="${blog.content}" /></textarea>
+
+<!-- Formatted content submitted to Java -->
+<input type="hidden"
+       id="contentHtml"
+       name="contentHtml">
+
+<!-- Previously saved HTML, escaped for safe transport -->
+<textarea id="initialContentHtml"
+          hidden><c:out value="${initialContentHtml}" /></textarea>
+
+<!-- Quill editor -->
+<div id="richEditor" hidden></div>
+
+
+<h2>Live Preview</h2>
+
+<section class="blog-preview">
+
+<%-- Display the cover already saved in MongoDB --%>
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img
+        id="existingCoverPreview"
+        src="<c:out value='${blog.coverImageUrl}' />"
+        alt="Current blog cover"
+        class="preview-cover">
+
+</c:if>
+
+<img id="coverPreview"
+     class="preview-cover"
+     alt="Replacement cover preview"
+     hidden>
+
+    <h2 id="previewTitle">Your blog title</h2>
+
+    <p id="previewCategory"
+       class="preview-category">
+        Category
+    </p>
+
+    <div id="previewContent"
+         class="preview-content ql-editor">
+        Your blog content will appear here.
+    </div>
+</section>
+
+        
+<div class="blog-actions">
+
+    <c:if test="${blog.status eq 'draft'}">
+
+        <button type="submit"
+                name="action"
+                value="draft"
+                formnovalidate
+                style="background:#666; color:white;">
+            Save Draft
         </button>
+
+    </c:if>
+
+    <button type="submit"
+            name="action"
+            value="submit"
+            style="background:#222; color:white;">
+        Submit for Review
+    </button>
+
+</div>
 
     </form>
 
@@ -116,5 +288,18 @@
     </p>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/edit-cover-preview.js?v=1"
+    defer></script>
+
 </body>
 </html>

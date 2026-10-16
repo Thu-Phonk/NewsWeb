@@ -1,17 +1,20 @@
-
 package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
+import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 
 import org.bson.Document;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +23,8 @@ import java.util.Date;
 import java.util.UUID;
 
 @WebServlet("/writer/submit")
+@MultipartConfig(fileSizeThreshold = 0, maxFileSize = 5L * 1024 * 1024,
+        maxRequestSize = 6L * 1024 * 1024)
 public class WriterArticleServlet extends HttpServlet {
 
     @Override
@@ -65,12 +70,28 @@ public class WriterArticleServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
 
+        CloudinaryImageUtil.UploadedImage newCover = null;
+        boolean storedInMongo = false;
+
         try {
             if (!checkAccess(request, response)) {
                 return;
             }
 
+String action = request.getParameter("action");
+
+boolean saveDraft = "draft".equals(action);
+
+if (!saveDraft && !"submit".equals(action)) {
+    response.sendError(400, "Invalid article action.");
+    return;
+}
+
             HttpSession session = request.getSession(false);
+if (session == null) {
+    response.sendError(403, "Session expired.");
+    return;
+}
 
             String expected = (String)
                     session.getAttribute("articleCsrfToken");
@@ -86,43 +107,71 @@ public class WriterArticleServlet extends HttpServlet {
                 return;
             }
 
-            String title = request.getParameter("title");
-            String category = request.getParameter("category");
-            String content = request.getParameter("content");
 
-            if (title == null || category == null ||
-                    content == null) {
+String title = request.getParameter("title");
+String category = request.getParameter("category");
+String content = request.getParameter("content");
 
-                showError(request, response,
-                        "All fields are required.");
-                return;
-            }
+title = title == null ? "" : title.trim();
+category = category == null ? "" : category.trim();
+content = content == null ? "" : content.trim();
 
-            title = title.trim();
-            category = category.trim();
-            content = content.trim();
+String rawHtml = request.getParameter("contentHtml");
+String safeHtml = null;
 
-            if (title.length() < 5 || title.length() > 200) {
-                showError(request, response,
-                        "Title must be 5 to 200 characters.");
-                return;
-            }
+if (rawHtml != null && !rawHtml.isBlank()) {
 
-            if (category.length() < 2 ||
-                    category.length() > 60) {
+    // Limit incoming HTML size before processing.
+    if (rawHtml.length() > 100000) {
+        showError(request, response,
+                "Formatted article content is too large.");
+        return;
+    }
 
-                showError(request, response,
-                        "Category must be 2 to 60 characters.");
-                return;
-            }
+    // Remove unsafe HTML, attributes and URLs.
+    safeHtml = RichTextUtil.sanitize(rawHtml);
 
-            if (content.length() < 50 ||
-                    content.length() > 20000) {
+    // Derive searchable plain text from the safe HTML.
+    content = RichTextUtil.toPlainText(safeHtml);
+}
 
-                showError(request, response,
-                        "Content must be 50 to 20000 characters.");
-                return;
-            }
+// Maximum lengths apply to both drafts and submissions.
+if (title.length() > 200
+        || category.length() > 60
+        || content.length() > 20000) {
+
+    showError(request, response,
+            "One or more fields exceed the maximum length.");
+    return;
+}
+
+if (saveDraft) {
+
+    // Avoid creating completely empty drafts.
+    if (title.isEmpty() && category.isEmpty()
+            && content.isEmpty()) {
+
+        showError(request, response,
+                "Enter some content before saving a draft.");
+        return;
+    }
+
+} else {
+
+    // Full validation is required for editor submission.
+    if (title.length() < 5
+            || category.length() < 2
+            || content.length() < 50) {
+
+        showError(request, response,
+                "To submit an article, enter a title "
+                + "(at least 5 characters), category "
+                + "(at least 2 characters), and content "
+                + "(at least 50 characters).");
+        return;
+    }
+}
+
 
             // Retrieve identity and current role from MongoDB.
             Document user = RoleUtil.getCurrentUser(request);
@@ -134,6 +183,17 @@ public class WriterArticleServlet extends HttpServlet {
                 return;
             }
 
+            try {
+                newCover = CloudinaryImageUtil.uploadEditorialCover(
+                        request.getPart("coverImage"));
+            } catch (IllegalArgumentException e) {
+                showError(request, response, e.getMessage());
+                return;
+            } catch (IllegalStateException e) {
+                response.sendError(413, "Cover image is too large.");
+                return;
+            }
+
             Date now = new Date();
 
             Document article = new Document()
@@ -142,19 +202,29 @@ public class WriterArticleServlet extends HttpServlet {
                     .append("content", content)
                     .append("authorId", user.getObjectId("_id"))
                     .append("authorName", user.getString("username"))
-                    .append("status", "pending")
+                    .append("status", saveDraft ? "draft" : "pending")
                     .append("createdAt", now)
                     .append("updatedAt", now);
+if (safeHtml != null) {
+    article.append("contentHtml", safeHtml);
+}
+            if (newCover != null) {
+                article.append("coverImageUrl", newCover.url());
+                article.append("coverImagePublicId", newCover.publicId());
+            }
 
             EditorialCollection.getCollection()
                     .insertOne(article);
+            storedInMongo = true;
 
             session.removeAttribute("articleCsrfToken");
 
             response.sendRedirect(
-                    request.getContextPath()
-                    + "/writer/submit?submitted=1"
-            );
+        request.getContextPath()
+        + (saveDraft
+            ? "/writer/articles?saved=draft"
+            : "/writer/submit?submitted=1")
+);
 
         } catch (Exception e) {
             getServletContext().log(
@@ -163,6 +233,17 @@ public class WriterArticleServlet extends HttpServlet {
             response.sendError(
                     500, "Unable to submit article."
             );
+        } finally {
+            if (!storedInMongo && newCover != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(
+                            newCover.publicId());
+                } catch (IOException cleanupError) {
+                    getServletContext().log(
+                            "Unused editorial cover cleanup failed.",
+                            cleanupError);
+                }
+            }
         }
     }
 
@@ -200,6 +281,13 @@ public class WriterArticleServlet extends HttpServlet {
 
         response.setStatus(400);
         request.setAttribute("error", message);
+        request.setAttribute("formTitle", request.getParameter("title"));
+        request.setAttribute("formCategory", request.getParameter("category"));
+        request.setAttribute("formContent", request.getParameter("content"));
+        String rawHtml = request.getParameter("contentHtml");
+        if (rawHtml != null && rawHtml.length() <= 100000) {
+            request.setAttribute("formContentHtml", RichTextUtil.sanitize(rawHtml));
+        }
 
         request.getRequestDispatcher(
                 "/WEB-INF/views/writer-submit.jsp"

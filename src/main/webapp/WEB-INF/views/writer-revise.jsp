@@ -1,4 +1,3 @@
-
 <%@ page contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
@@ -11,6 +10,10 @@
           content="width=device-width, initial-scale=1">
 
     <title>Revise Article - NewsWeb</title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"        
+        rel="stylesheet">
 
     <style>
         body {
@@ -40,6 +43,20 @@
             padding: 12px;
         }
 
+        #content {
+            min-height: 250px;
+        }
+
+        #richEditor {
+            background: white;
+        }
+
+        #richEditor .ql-editor {
+            min-height: 300px;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
         button {
             margin-top: 20px;
             padding: 12px 20px;
@@ -54,24 +71,71 @@
             background: #fff1f1;
             border-left: 4px solid #ba3030;
             padding: 15px;
+            border-radius: 5px;
         }
 
-        .error { color: red; }
-    </style>
+        .error {
+            color: #b00020;
+        }
+
+        .blog-preview {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .preview-category {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .preview-content.ql-editor {
+            min-height: 0;
+            padding: 0;
+            white-space: normal;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .navigation {
+            margin-top: 25px;
+        }
+    
+/* Editorial cover preview */
+.preview-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 350px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.preview-cover[hidden] { display: none; }
+.cover-choice { width: auto; }
+
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 <main>
 
     <h1>Revise Editorial Article</h1>
 
     <p>
-        Your revised article will be sent
-        back for editor review.
+        Edit your rejected article and submit it
+        for another editorial review.
     </p>
 
     <div class="feedback">
         <strong>Editor's Previous Feedback</strong>
+
         <p>
             <c:out value="${article.rejectionReason}"
                    default="No feedback provided." />
@@ -85,7 +149,8 @@
     </c:if>
 
     <form action="${pageContext.request.contextPath}/writer/revise"
-          method="post">
+          method="post"
+          enctype="multipart/form-data">
 
         <input type="hidden"
                name="id"
@@ -93,9 +158,9 @@
 
         <input type="hidden"
                name="csrfToken"
-               value="<c:out value='${sessionScope.revisionCsrfToken}' />">
+               value="<c:out value='${sessionScope.revisionCsrfToken}' />">        
 
-        <label for="title">Title</label>
+        <label for="title">Article Title</label>
 
         <input type="text"
                id="title"
@@ -115,8 +180,25 @@
                value="<c:out value='${article.category}' />"
                required>
 
-        <label for="content">Content</label>
+        <label for="coverImage">Cover Image (Optional)</label>
+<input id="coverImage"
+       name="coverImage"
+       type="file"
+       accept="image/jpeg,image/png">
+<p style="font-size:13px;color:#666;">
+    JPEG or PNG, maximum 5 MB. Leave empty to keep your current image.
+</p>
+<c:if test="${not empty article.coverImageUrl}">
+    <label>
+        <input class="cover-choice" type="checkbox"
+               id="removeCover" name="removeCover" value="true">
+        Remove current cover
+    </label>
+</c:if>
 
+<label for="content">Article Content</label>
+
+        <!-- Plain-text fallback -->
         <textarea id="content"
                   name="content"
                   rows="15"
@@ -124,17 +206,73 @@
                   maxlength="20000"
                   required><c:out value="${article.content}" /></textarea>
 
+        <!-- Formatted content for Java -->
+        <input type="hidden"
+               id="contentHtml"
+               name="contentHtml">
+
+        <!-- Existing sanitized formatting -->
+        <textarea id="initialContentHtml"
+                  hidden><c:out value="${initialContentHtml}" /></textarea>        
+
+        <!-- Quill rich-text editor -->
+        <div id="richEditor" hidden></div>
+
+        <h2>Live Preview</h2>
+
+        <section class="blog-preview">
+<c:choose>
+    <c:when test="${not empty article.coverImageUrl}">
+        <img id="coverPreview" class="preview-cover"
+             src="<c:out value='${article.coverImageUrl}' />"
+             alt="Article cover preview">
+    </c:when>
+    <c:otherwise>
+        <img id="coverPreview" class="preview-cover"
+             alt="Article cover preview" hidden>
+    </c:otherwise>
+</c:choose>
+
+
+            <h2 id="previewTitle">
+                Your article title
+            </h2>
+
+            <p id="previewCategory"
+               class="preview-category">
+                Category
+            </p>
+
+            <div id="previewContent"
+                 class="preview-content ql-editor">
+                Your article content will appear here.
+            </div>
+
+        </section>
+
         <button type="submit">
             Resubmit for Review
         </button>
+
     </form>
 
-    <p>
+    <div class="navigation">
         <a href="${pageContext.request.contextPath}/writer/articles">
-            Back to My Editorial Articles
+            &larr; Back to My Editorial Articles
         </a>
-    </p>
+    </div>
 
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=3"
+    defer></script>
+
+<script src="${pageContext.request.contextPath}/js/editorial-cover-preview.js?v=1"
+        defer></script>
 </body>
 </html>

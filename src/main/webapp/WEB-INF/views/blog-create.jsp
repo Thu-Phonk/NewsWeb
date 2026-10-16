@@ -12,6 +12,10 @@
 
     <title>Create Blog - NewsWeb</title>
 
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css"
+    rel="stylesheet">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -48,10 +52,96 @@
 
         .success { color: green; }
         .error { color: red; }
+
+.blog-preview {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.blog-preview h2 {
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.preview-category {
+    color: #777;
+    font-size: 14px;
+}
+
+.preview-content {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.ql-toolbar.ql-snow {
+    background: #fafafa;
+}
+
+#richEditor {
+    background: white;
+}
+
+#richEditor .ql-editor {
+    min-height: 250px;
+    font-size: 16px;
+    line-height: 1.7;
+}
+
+.blog-preview {
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.preview-content.ql-editor {
+    min-height: 0;
+    padding: 0;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.preview-content.ql-editor p {
+    margin-bottom: 12px;
+}
+
+.preview-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.preview-cover[hidden] {
+    display: none;
+}
+
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 <main>
 
     <h1>Create a Blog Post</h1>
@@ -76,8 +166,10 @@
         </p>
     </c:if>
 
-    <form action="${pageContext.request.contextPath}/blog/create"
-          method="post">
+<form action="${pageContext.request.contextPath}/blog/create"
+      method="post"
+      enctype="multipart/form-data">
+
 
         <input type="hidden"
                name="csrfToken"
@@ -99,17 +191,76 @@
                maxlength="60"
                required>
 
-        <label for="content">Blog Content</label>
-        <textarea id="content"
-                  name="content"
-                  rows="12"
-                  minlength="10"
-                  maxlength="10000"
-                  required></textarea>
+<label for="coverImage">Cover Image (Optional)</label>
 
-        <button type="submit">
-            Publish Blog
-        </button>
+<input type="file"
+       id="coverImage"
+       name="coverImage"
+       accept="image/jpeg,image/png">
+
+<p style="color:#666; font-size:13px;">
+    JPEG or PNG, maximum 5 MB.
+</p>
+
+        <label for="content">Blog Content</label>
+        
+<!-- Plain-text fallback for compatibility -->
+<textarea id="content"
+          name="content"
+          rows="12"
+          maxlength="10000"
+          required></textarea>
+
+<!-- New formatted article content -->
+<input type="hidden"
+       id="contentHtml"
+       name="contentHtml">
+
+<!-- Quill editor appears here when JavaScript loads -->
+<div id="richEditor" hidden></div>
+
+
+<h2>Live Preview</h2>
+
+<section class="blog-preview" aria-live="polite">
+
+<img id="coverPreview"
+     class="preview-cover"
+     alt="Blog cover preview"
+     hidden>
+
+    <h2 id="previewTitle">Your blog title</h2>
+
+    <p class="preview-category"
+       id="previewCategory">
+        Category
+    </p>
+
+    <div id="previewContent"
+         class="preview-content">
+        Your blog content will appear here.
+    </div>
+</section>
+
+        
+<div class="blog-actions">
+
+    <button type="submit"
+            name="action"
+            value="draft"
+            formnovalidate
+            style="background:#666; color:white;">
+        Save Draft
+    </button>
+
+    <button type="submit"
+            name="action"
+            value="submit"
+            style="background:#222; color:white;">
+        Submit for Review
+    </button>
+
+</div>
 
     </form>
 
@@ -124,5 +275,85 @@
     </a>
 </p>
 </main>
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
+    defer></script>
+
+<script>
+(function () {
+    function initializeCoverPreview() {
+
+        const fileInput =
+            document.getElementById("coverImage");
+
+        const preview =
+            document.getElementById("coverPreview");
+
+        if (!fileInput || !preview) {
+            console.error(
+                "Cover preview elements not found."
+            );
+            return;
+        }
+
+        let imageUrl = null;
+
+        fileInput.addEventListener("change", function () {
+
+            // Clean up the previous preview.
+            if (imageUrl) {
+                URL.revokeObjectURL(imageUrl);
+                imageUrl = null;
+            }
+
+            preview.hidden = true;
+            preview.removeAttribute("src");
+
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            if (!["image/jpeg", "image/png"].includes(file.type)
+                    || file.size > 5 * 1024 * 1024) {
+
+                alert("Please choose a JPEG or PNG under 5 MB.");
+                fileInput.value = "";
+                return;
+            }
+
+            imageUrl = URL.createObjectURL(file);
+
+            preview.onload = function () {
+                preview.hidden = false;
+                console.log("Cover preview loaded!");
+            };
+
+            preview.onerror = function () {
+                preview.hidden = true;
+                console.error("Could not preview image.");
+            };
+
+            preview.src = imageUrl;
+        });
+
+        console.log("Cover preview initialized!");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializeCoverPreview
+        );
+    } else {
+        initializeCoverPreview();
+    }
+})();
+</script>
+
 </body>
 </html>
