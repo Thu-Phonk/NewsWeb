@@ -9,7 +9,11 @@ main{max-width:850px;margin:35px auto;padding:20px}
 .bookmark{background:white;padding:20px;margin-bottom:18px;border-radius:8px}
 .bookmark img{max-width:100%;width:100%;max-height:250px;object-fit:cover;border-radius:6px}
 a{color:#1457a5}
-</style></head><body><main>
+</style><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
+</head><body>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" /><main>
 <h1>My Bookmarks</h1>
 <p><a href="${pageContext.request.contextPath}/news">News</a> · <a href="${pageContext.request.contextPath}/editorials">Editorials</a> · <a href="${pageContext.request.contextPath}/blogs">Community Blogs</a></p>
 <c:choose>

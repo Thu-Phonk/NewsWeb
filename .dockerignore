@@ -1,3 +1,4 @@
+
 .git
 .gitignore
 target/
@@ -5,6 +6,15 @@ target/
 .project
 .settings/
 .idea/
+.vscode/
+
 *.log
+*.zip
+*.bak
+*.backup
+
 .env
 .env.*
+node_modules/
+.DS_Store
+Thumbs.db

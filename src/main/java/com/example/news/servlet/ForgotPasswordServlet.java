@@ -26,6 +26,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import jakarta.servlet.http.HttpSession;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -33,6 +38,19 @@ import java.util.Locale;
 
 @WebServlet("/forgot")
 public class ForgotPasswordServlet extends HttpServlet {
+    private static final SecureRandom CSRF_RANDOM = new SecureRandom();
+    private static final String CSRF_SESSION_KEY = "forgotPasswordCsrfToken";
+
+    private void prepareFormToken(HttpServletRequest request) {
+        HttpSession session = request.getSession(true);
+        if (session.getAttribute(CSRF_SESSION_KEY) == null) {
+            byte[] bytes = new byte[24];
+            CSRF_RANDOM.nextBytes(bytes);
+            session.setAttribute(CSRF_SESSION_KEY,
+                    Base64.getUrlEncoder().withoutPadding().encodeToString(bytes));
+        }
+    }
+
 
     @Override
     protected void doGet(
@@ -41,6 +59,7 @@ public class ForgotPasswordServlet extends HttpServlet {
     ) throws ServletException, IOException {
 
         response.setHeader("Cache-Control", "no-store");
+        prepareFormToken(request);
 
         request.getRequestDispatcher(
                 "/WEB-INF/views/forgot.jsp"
@@ -54,6 +73,17 @@ public class ForgotPasswordServlet extends HttpServlet {
     ) throws IOException {
 
         request.setCharacterEncoding("UTF-8");
+        HttpSession csrfSession = request.getSession(false);
+        Object expected = csrfSession == null ? null : csrfSession.getAttribute(CSRF_SESSION_KEY);
+        String supplied = request.getParameter("csrfToken");
+        if (!(expected instanceof String known) || supplied == null ||
+                !MessageDigest.isEqual(known.getBytes(StandardCharsets.UTF_8),
+                        supplied.getBytes(StandardCharsets.UTF_8))) {
+            response.sendError(403, "Invalid reset request form token.");
+            return;
+        }
+        csrfSession.removeAttribute(CSRF_SESSION_KEY);
+
 
         String email = request.getParameter("email");
 

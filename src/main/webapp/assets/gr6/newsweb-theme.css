@@ -1,0 +1,57 @@
+/* GR6 News x NewsWeb bridge. Partner navbar.css supplies the gn-* masthead/navigation. */
+:root { --gr-red:#d93025; --gr-ink:#111; --gr-muted:#68707a; --gr-paper:#fff; --gr-line:#e7e9ec; }
+html { scroll-behavior:smooth; }
+body { background: #f2f3f4 !important; color:var(--gr-ink); font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; line-height:1.55; }
+header.gn-masthead { padding:0 !important; text-align:left !important; color:#111 !important; background:#fff !important; }
+.gn-utility { padding:0; text-align:left; }
+.gn-utility .gn-wrap { display:flex; justify-content:space-between; align-items:center; }
+.gn-masthead .gn-wrap { width:auto !important; max-width:1320px; }
+.gn-logo { background:transparent !important; }
+.gn-logo .gn-logo-text { font-size:2.6rem; }
+.gn-masthead .gn-logo, .gn-masthead .gn-logo:hover { color:#111; text-decoration:none; }
+.gn-catbar { padding:0 !important; max-width:none; margin:0; border-radius:0; }
+.gn-catbar .gn-wrap { max-width:1320px; }
+.gn-catbar .gn-cats { overflow-x:auto; justify-content:flex-start; scrollbar-width:thin; }
+.gn-catbar .gn-cat-link { font-size:13px; }
+.gn-account-name { display:inline-block; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.gn-logout-form { margin:0; display:inline-flex; }
+.gn-logout-button { display:inline-block !important; width:auto !important; min-width:0 !important; margin:0 !important; padding:9px 15px !important; border:0 !important; border-radius:999px !important; background:#111 !important; color:#fff !important; font-weight:600; line-height:1.3; }
+.gn-logout-button:hover { background:var(--gr-red) !important; }
+.gn-utility-note { font-size:12px; }
+main { box-sizing:border-box; width:min(100%, 1200px); padding-inline:clamp(16px,3vw,28px); }
+main h1,main h2,main h3 { font-family:Lora,Georgia,serif; letter-spacing:-.015em; line-height:1.28; }
+main h1 { font-size:clamp(1.8rem,3.2vw,2.7rem); }
+main h2 { font-size:clamp(1.3rem,2.3vw,1.9rem); }
+main .article,main .blog-card,main .news-card,main .panel,main .filters,main .comments-section,main .bookmark,main .blog-preview {
+  box-shadow:0 14px 38px rgba(18,24,32,.055),0 2px 7px rgba(18,24,32,.025);
+  border:1px solid var(--gr-line); border-radius:13px;
+}
+main .article-title { font-family:Lora,Georgia,serif; }
+main .author,main .category,main .meta,main .comment-date,main .muted { color:#69707a; }
+main a { color:#1765a1; }
+main a:hover { color:var(--gr-red); }
+main a.button,main a.nav-button,main .filters button,main .comment-submit,main button[type=submit]:not(.delete-comment):not(.hide-comment):not(.restore-comment),main .create-link {
+  background:#111; color:#fff; border:0; border-radius:9px; padding:10px 17px; font:600 14px/1.35 Inter,system-ui,sans-serif;
+  text-decoration:none; display:inline-block; cursor:pointer; transition:background .15s,transform .15s;
+}
+main a.button:hover,main a.nav-button:hover,main .filters button:hover,main .comment-submit:hover,main button[type=submit]:not(.delete-comment):not(.hide-comment):not(.restore-comment):hover,main .create-link:hover { background:var(--gr-red);color:#fff; }
+main .hide-comment { background:#b9332a; }
+main .restore-comment { background:#237a39; }
+main input:not([type=checkbox]):not([type=radio]):not([type=hidden]),main select,main textarea {
+  max-width:100%; border-radius:8px; border:1px solid #cfd3d8; font:inherit;
+}
+main input:focus-visible,main select:focus-visible,main textarea:focus-visible { outline:2px solid #b42521; outline-offset:2px; }
+main img { max-width:100%; }
+main .article-content,main .content { line-height:1.85; }
+main .comment-card,main .reply-card { overflow-wrap:anywhere; }
+main .filters { padding:22px; }
+main .pagination { gap:12px; }
+@media (max-width:760px) {
+ .gn-utility-note,.gn-mast-left,.gn-account-name { display:none; }
+ .gn-masthead .gn-wrap { grid-template-columns: 1fr auto !important; gap:12px; }
+ .gn-mast-right { min-width:0; }
+ .gn-logo .gn-logo-text { font-size:1.8rem; }
+ .gn-logout-button { font-size:12px !important; padding:8px 10px !important; }
+ main { padding:0 14px !important; }
+ main .article,main .blog-card,main .news-card,main .panel,main .comments-section { padding:20px !important; }
+}

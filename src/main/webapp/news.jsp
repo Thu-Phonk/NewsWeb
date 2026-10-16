@@ -73,60 +73,14 @@
             margin-top: 35px;
         }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 
 <body>
 
-<header>
-    <h1>News Website</h1>
-    <p>Latest News</p>
-
-    
-<nav>
-    <a href="${pageContext.request.contextPath}/news">
-        Latest News
-    </a>
-
-    <a href="${pageContext.request.contextPath}/editorials">
-        Editorial Articles
-    </a>
-
-    <a href="${pageContext.request.contextPath}/blogs">
-        Community Blogs
-    </a>
-
-    <a href="${pageContext.request.contextPath}/blog/my-posts">
-        My Blog Posts
-    </a>
-
-    <a href="${pageContext.request.contextPath}/blog/create">
-        Write a Blog
-    </a>
-
-    <c:if test="${canWrite}">
-    <a href="${pageContext.request.contextPath}/writer">
-        Writer Dashboard
-    </a>
-</c:if>
-
-<c:if test="${canEdit}">
-    <a href="${pageContext.request.contextPath}/editor">
-        Editor Dashboard
-    </a>
-</c:if>
-
-<c:if test="${isAdmin}">
-    <a href="${pageContext.request.contextPath}/admin/users">
-        Admin: Manage Users
-    </a>
-</c:if>
-
-    <a href="${pageContext.request.contextPath}/login">
-        Account
-    </a>
-</nav>
-
-</header>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 
 <main>
 

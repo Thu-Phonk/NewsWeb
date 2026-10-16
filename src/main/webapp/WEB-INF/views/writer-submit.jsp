@@ -40,12 +40,12 @@
                       color: white; text-decoration: none; border-radius: 5px; }
         .nav-button:hover { background: #555; }
     </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/navbar.css?v=1">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/gr6/newsweb-theme.css?v=1">
 </head>
 <body>
-<header>
-    <h1>NewsWeb Writer</h1>
-    <p>Editorial Article Submission</p>
-</header>
+<jsp:include page="/WEB-INF/views/partials/gr6-header.jsp" />
 <main>
     <h2>Submit a News Article</h2>
     <p>Your article will be reviewed by an editor before publication.</p>
