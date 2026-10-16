@@ -127,6 +127,17 @@
             border-radius: 5px;
             margin: 15px 0;
         }
+
+.editorial-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 380px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
 </head>
 
@@ -210,11 +221,22 @@
 
         <c:forEach var="article" items="${articles}">
 
-            <article class="article">
+            
+<article class="article">
 
-                <h2>
-                    <c:out value="${article.title}" />
-                </h2>
+    <%-- Display the saved editorial cover --%>
+    <c:if test="${not empty article.coverImageUrl}">
+        <img
+            src="<c:out value='${article.coverImageUrl}' />"
+            alt="Article cover"
+            class="editorial-cover"
+            loading="lazy">
+    </c:if>
+
+    <h2>
+        <c:out value="${article.title}" />
+    </h2>
+
 
                 <p class="meta">
                     Category:

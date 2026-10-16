@@ -110,6 +110,17 @@
         .approve { background: #237a39; }
         .reject { background: #ba3030; }
         .success { color: green; }
+
+.editorial-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
 </head>
 
@@ -132,8 +143,6 @@
         </a>
     </nav>
 </header>
-
-<main>
 
 <main>
 
@@ -163,11 +172,22 @@
             <c:forEach var="article"
                        items="${pendingArticles}">
 
-                <div class="article">
+                
+<div class="article">
 
-                    <h2>
-                        <c:out value="${article.title}" />
-                    </h2>
+    <%-- Show the submitted cover to the editor --%>
+    <c:if test="${not empty article.coverImageUrl}">
+        <img
+            src="<c:out value='${article.coverImageUrl}' />"
+            alt="Submitted article cover"
+            class="editorial-cover"
+            loading="lazy">
+    </c:if>
+
+    <h2>
+        <c:out value="${article.title}" />
+    </h2>
+
 
                     <p class="meta">
                         Category:

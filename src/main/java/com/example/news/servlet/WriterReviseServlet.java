@@ -1,8 +1,8 @@
-
 package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 import com.example.news.util.RoleUtil;
 
 import com.mongodb.client.model.Filters;
@@ -14,18 +14,24 @@ import org.bson.conversions.Bson;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @WebServlet("/writer/revise")
+@MultipartConfig(fileSizeThreshold = 0, maxFileSize = 5L * 1024 * 1024,
+        maxRequestSize = 6L * 1024 * 1024)
 public class WriterReviseServlet extends HttpServlet {
 
     private static final String VIEW =
@@ -104,6 +110,9 @@ public class WriterReviseServlet extends HttpServlet {
 
         request.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
+
+        CloudinaryImageUtil.UploadedImage newCover = null;
+        boolean savedInMongo = false;
 
         try {
             Document user = requireWriter(request, response);
@@ -228,6 +237,50 @@ public class WriterReviseServlet extends HttpServlet {
                     ? Updates.unset("contentHtml")
                     : Updates.set("contentHtml", safeHtml);
 
+            // No checkbox and no new file: keep the existing image.
+            boolean removeCover =
+                    "true".equals(request.getParameter("removeCover"));
+            Part coverPart;
+            try {
+                coverPart = request.getPart("coverImage");
+            } catch (IllegalStateException e) {
+                response.sendError(413, "Cover image is too large.");
+                return;
+            }
+            boolean replacing = coverPart != null && coverPart.getSize() > 0;
+            if (removeCover && replacing) {
+                response.sendError(400,
+                        "Choose either replacement or removal, not both.");
+                return;
+            }
+            if (replacing) {
+                try {
+                    newCover = CloudinaryImageUtil.uploadEditorialCover(coverPart);
+                } catch (IllegalArgumentException e) {
+                    response.sendError(400, e.getMessage());
+                    return;
+                }
+            }
+
+            String previousCoverId = article.getString("coverImagePublicId");
+            List<Bson> updates = new ArrayList<>();
+            updates.add(Updates.set("title", title));
+            updates.add(Updates.set("category", category));
+            updates.add(Updates.set("content", content));
+            updates.add(htmlUpdate);
+            updates.add(Updates.set("status", "pending"));
+            updates.add(Updates.set("updatedAt", new Date()));
+            updates.add(Updates.unset("reviewedBy"));
+            updates.add(Updates.unset("reviewedAt"));
+            updates.add(Updates.unset("rejectionReason"));
+            if (removeCover) {
+                updates.add(Updates.unset("coverImageUrl"));
+                updates.add(Updates.unset("coverImagePublicId"));
+            } else if (newCover != null) {
+                updates.add(Updates.set("coverImageUrl", newCover.url()));
+                updates.add(Updates.set("coverImagePublicId", newCover.publicId()));
+            }
+
             // Atomic check prevents revising another author's
             // article or resubmitting a non-rejected article.
             long matched = EditorialCollection.getCollection()
@@ -235,20 +288,10 @@ public class WriterReviseServlet extends HttpServlet {
                             Filters.and(
                                     Filters.eq("_id", articleId),
                                     Filters.eq("authorId", authorId),
-                                    Filters.eq("status", "rejected")
+                                    Filters.eq("status", "rejected"),
+                                    Filters.eq("updatedAt", article.getDate("updatedAt"))
                             ),
-                            Updates.combine(
-                                    Updates.set("title", title),
-                                    Updates.set("category", category),
-                                    Updates.set("content", content),
-                                    htmlUpdate,
-                                    Updates.set("status", "pending"),
-                                    Updates.set(
-                                            "updatedAt", new Date()),
-                                    Updates.unset("reviewedBy"),
-                                    Updates.unset("reviewedAt"),
-                                    Updates.unset("rejectionReason")
-                            )
+                            Updates.combine(updates)
                     )
                     .getMatchedCount();
 
@@ -257,6 +300,15 @@ public class WriterReviseServlet extends HttpServlet {
                         409, "Article is no longer revisable."
                 );
                 return;
+            }
+
+            savedInMongo = true;
+            if ((removeCover || newCover != null) && previousCoverId != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(previousCoverId);
+                } catch (IOException cleanupError) {
+                    getServletContext().log("Old editorial cover cleanup failed.", cleanupError);
+                }
             }
 
             session.removeAttribute(TOKEN_KEY);
@@ -273,6 +325,14 @@ public class WriterReviseServlet extends HttpServlet {
             response.sendError(
                     500, "Unable to revise article."
             );
+        } finally {
+            if (!savedInMongo && newCover != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(newCover.publicId());
+                } catch (IOException cleanupError) {
+                    getServletContext().log("Unused editorial cover cleanup failed.", cleanupError);
+                }
+            }
         }
     }
 

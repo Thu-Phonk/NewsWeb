@@ -80,6 +80,17 @@
             border-radius: 5px;
             margin-bottom: 20px;
         }
+
+.post-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
 </head>
 
@@ -145,6 +156,15 @@
             <c:forEach var="blog" items="${myBlogs}">
 
                 <article class="post">
+
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img src="<c:out value='${blog.coverImageUrl}' />"
+         alt="Cover image for this blog"
+         loading="lazy"
+         class="post-cover">
+
+</c:if>
 
                     <h2>
                         <c:out value="${blog.title}" />

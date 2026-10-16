@@ -1,18 +1,20 @@
-
 package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
 import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 
 import org.bson.Document;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -21,6 +23,8 @@ import java.util.Date;
 import java.util.UUID;
 
 @WebServlet("/writer/submit")
+@MultipartConfig(fileSizeThreshold = 0, maxFileSize = 5L * 1024 * 1024,
+        maxRequestSize = 6L * 1024 * 1024)
 public class WriterArticleServlet extends HttpServlet {
 
     @Override
@@ -66,6 +70,9 @@ public class WriterArticleServlet extends HttpServlet {
         request.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
 
+        CloudinaryImageUtil.UploadedImage newCover = null;
+        boolean storedInMongo = false;
+
         try {
             if (!checkAccess(request, response)) {
                 return;
@@ -100,7 +107,7 @@ if (session == null) {
                 return;
             }
 
-            
+
 String title = request.getParameter("title");
 String category = request.getParameter("category");
 String content = request.getParameter("content");
@@ -176,6 +183,17 @@ if (saveDraft) {
                 return;
             }
 
+            try {
+                newCover = CloudinaryImageUtil.uploadEditorialCover(
+                        request.getPart("coverImage"));
+            } catch (IllegalArgumentException e) {
+                showError(request, response, e.getMessage());
+                return;
+            } catch (IllegalStateException e) {
+                response.sendError(413, "Cover image is too large.");
+                return;
+            }
+
             Date now = new Date();
 
             Document article = new Document()
@@ -190,8 +208,14 @@ if (saveDraft) {
 if (safeHtml != null) {
     article.append("contentHtml", safeHtml);
 }
+            if (newCover != null) {
+                article.append("coverImageUrl", newCover.url());
+                article.append("coverImagePublicId", newCover.publicId());
+            }
+
             EditorialCollection.getCollection()
                     .insertOne(article);
+            storedInMongo = true;
 
             session.removeAttribute("articleCsrfToken");
 
@@ -209,6 +233,17 @@ if (safeHtml != null) {
             response.sendError(
                     500, "Unable to submit article."
             );
+        } finally {
+            if (!storedInMongo && newCover != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(
+                            newCover.publicId());
+                } catch (IOException cleanupError) {
+                    getServletContext().log(
+                            "Unused editorial cover cleanup failed.",
+                            cleanupError);
+                }
+            }
         }
     }
 
@@ -246,6 +281,13 @@ if (safeHtml != null) {
 
         response.setStatus(400);
         request.setAttribute("error", message);
+        request.setAttribute("formTitle", request.getParameter("title"));
+        request.setAttribute("formCategory", request.getParameter("category"));
+        request.setAttribute("formContent", request.getParameter("content"));
+        String rawHtml = request.getParameter("contentHtml");
+        if (rawHtml != null && rawHtml.length() <= 100000) {
+            request.setAttribute("formContentHtml", RichTextUtil.sanitize(rawHtml));
+        }
 
         request.getRequestDispatcher(
                 "/WEB-INF/views/writer-submit.jsp"

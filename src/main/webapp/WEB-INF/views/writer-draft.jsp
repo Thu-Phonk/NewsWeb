@@ -1,4 +1,3 @@
-
 <%@ page contentType="text/html; charset=UTF-8"
          pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
@@ -148,7 +147,21 @@
     margin-bottom: 12px;
 }
 
-    </style>
+    
+/* Editorial cover preview */
+.preview-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 350px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+.preview-cover[hidden] { display: none; }
+.cover-choice { width: auto; }
+
+</style>
 </head>
 
 <body>
@@ -174,7 +187,8 @@
     </c:if>
 
     <form action="${pageContext.request.contextPath}/writer/draft"
-          method="post">
+          method="post"
+          enctype="multipart/form-data">
 
         <input type="hidden"
                name="id"
@@ -182,7 +196,7 @@
 
         <input type="hidden"
                name="csrfToken"
-               value="<c:out value='${sessionScope.writerDraftCsrfToken}' />">
+               value="<c:out value='${sessionScope.writerDraftCsrfToken}' />">     
 
         <label for="title">Article Title</label>
 
@@ -203,7 +217,23 @@
                value="<c:out value='${draft.category}' />"
                required>
 
-        
+
+<label for="coverImage">Cover Image (Optional)</label>
+<input id="coverImage"
+       name="coverImage"
+       type="file"
+       accept="image/jpeg,image/png">
+<p style="font-size:13px;color:#666;">
+    JPEG or PNG, maximum 5 MB. Leave empty to keep your current image.
+</p>
+<c:if test="${not empty draft.coverImageUrl}">
+    <label>
+        <input class="cover-choice" type="checkbox"
+               id="removeCover" name="removeCover" value="true">
+        Remove current cover
+    </label>
+</c:if>
+
 <label for="content">Article Content</label>
 
 <!-- Original plain text for compatibility -->
@@ -229,6 +259,18 @@
 <h2>Live Preview</h2>
 
 <section class="blog-preview">
+<c:choose>
+    <c:when test="${not empty draft.coverImageUrl}">
+        <img id="coverPreview" class="preview-cover"
+             src="<c:out value='${draft.coverImageUrl}' />"
+             alt="Article cover preview">
+    </c:when>
+    <c:otherwise>
+        <img id="coverPreview" class="preview-cover"
+             alt="Article cover preview" hidden>
+    </c:otherwise>
+</c:choose>
+
     <h2 id="previewTitle">Your blog title</h2>
 
     <p id="previewCategory"
@@ -298,5 +340,7 @@
     defer></script>
 
 
+<script src="${pageContext.request.contextPath}/js/editorial-cover-preview.js?v=1"
+        defer></script>
 </body>
 </html>

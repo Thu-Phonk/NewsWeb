@@ -120,6 +120,20 @@
     margin-bottom: 12px;
 }
 
+.preview-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.preview-cover[hidden] {
+    display: none;
+}
+
     </style>
 </head>
 
@@ -148,8 +162,10 @@
         </p>
     </c:if>
 
-    <form action="${pageContext.request.contextPath}/blog/create"
-          method="post">
+<form action="${pageContext.request.contextPath}/blog/create"
+      method="post"
+      enctype="multipart/form-data">
+
 
         <input type="hidden"
                name="csrfToken"
@@ -170,6 +186,17 @@
                placeholder="Technology, Gaming, Education..."
                maxlength="60"
                required>
+
+<label for="coverImage">Cover Image (Optional)</label>
+
+<input type="file"
+       id="coverImage"
+       name="coverImage"
+       accept="image/jpeg,image/png">
+
+<p style="color:#666; font-size:13px;">
+    JPEG or PNG, maximum 5 MB.
+</p>
 
         <label for="content">Blog Content</label>
         
@@ -192,6 +219,12 @@
 <h2>Live Preview</h2>
 
 <section class="blog-preview" aria-live="polite">
+
+<img id="coverPreview"
+     class="preview-cover"
+     alt="Blog cover preview"
+     hidden>
+
     <h2 id="previewTitle">Your blog title</h2>
 
     <p class="preview-category"
@@ -246,6 +279,77 @@
 <script
     src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
     defer></script>
+
+<script>
+(function () {
+    function initializeCoverPreview() {
+
+        const fileInput =
+            document.getElementById("coverImage");
+
+        const preview =
+            document.getElementById("coverPreview");
+
+        if (!fileInput || !preview) {
+            console.error(
+                "Cover preview elements not found."
+            );
+            return;
+        }
+
+        let imageUrl = null;
+
+        fileInput.addEventListener("change", function () {
+
+            // Clean up the previous preview.
+            if (imageUrl) {
+                URL.revokeObjectURL(imageUrl);
+                imageUrl = null;
+            }
+
+            preview.hidden = true;
+            preview.removeAttribute("src");
+
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            if (!["image/jpeg", "image/png"].includes(file.type)
+                    || file.size > 5 * 1024 * 1024) {
+
+                alert("Please choose a JPEG or PNG under 5 MB.");
+                fileInput.value = "";
+                return;
+            }
+
+            imageUrl = URL.createObjectURL(file);
+
+            preview.onload = function () {
+                preview.hidden = false;
+                console.log("Cover preview loaded!");
+            };
+
+            preview.onerror = function () {
+                preview.hidden = true;
+                console.error("Could not preview image.");
+            };
+
+            preview.src = imageUrl;
+        });
+
+        console.log("Cover preview initialized!");
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializeCoverPreview
+        );
+    } else {
+        initializeCoverPreview();
+    }
+})();
+</script>
 
 </body>
 </html>

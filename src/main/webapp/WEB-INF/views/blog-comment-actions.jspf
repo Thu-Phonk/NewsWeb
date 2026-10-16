@@ -1,0 +1,41 @@
+<%-- Shared actions for a top-level comment or a reply. The caller sets "entry". --%>
+<c:if test="${entry.canManage}">
+    <details class="comment-edit">
+        <summary>Edit</summary>
+        <form action="${pageContext.request.contextPath}/blog/comment/manage" method="post">
+            <input type="hidden" name="blogId" value="<c:out value='${blog._id}' />">
+            <input type="hidden" name="commentId" value="<c:out value='${entry._id}' />">
+            <input type="hidden" name="csrfToken" value="<c:out value='${sessionScope.blogCommentCsrfToken}' />">
+            <textarea name="body" rows="3" minlength="2" maxlength="2000" required><c:out value="${entry.body}" /></textarea>
+            <button type="submit" name="action" value="edit">Save Changes</button>
+        </form>
+    </details>
+    <form action="${pageContext.request.contextPath}/blog/comment/manage" method="post"
+          onsubmit="return confirm('Delete this comment?');">
+        <input type="hidden" name="blogId" value="<c:out value='${blog._id}' />">
+        <input type="hidden" name="commentId" value="<c:out value='${entry._id}' />">
+        <input type="hidden" name="csrfToken" value="<c:out value='${sessionScope.blogCommentCsrfToken}' />">
+        <button class="button-danger" type="submit" name="action" value="delete">Delete</button>
+    </form>
+</c:if>
+
+<c:if test="${isCommentModerator}">
+    <div class="moderation-controls">
+        <form action="${pageContext.request.contextPath}/blog/comment/moderate" method="post">
+            <input type="hidden" name="blogId" value="<c:out value='${blog._id}' />">
+            <input type="hidden" name="commentId" value="<c:out value='${entry._id}' />">
+            <input type="hidden" name="csrfToken" value="<c:out value='${sessionScope.blogModerationCsrfToken}' />">
+            <c:choose>
+                <c:when test="${entry.status eq 'visible'}">
+                    <label for="moderation-${entry._id}">Reason for hiding</label>
+                    <textarea id="moderation-${entry._id}" name="moderationReason"
+                              rows="2" minlength="5" maxlength="500" required></textarea>
+                    <button class="button-danger" type="submit" name="action" value="hide">Hide Comment</button>
+                </c:when>
+                <c:when test="${entry.status eq 'hidden'}">
+                    <button type="submit" name="action" value="restore">Restore Comment</button>
+                </c:when>
+            </c:choose>
+        </form>
+    </div>
+</c:if>

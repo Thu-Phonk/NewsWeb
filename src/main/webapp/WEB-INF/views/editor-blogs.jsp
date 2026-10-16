@@ -45,11 +45,52 @@
             color: #666;
         }
 
-        .content {
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-            line-height: 1.7;
-        }
+        
+.review-cover {
+    display: block;
+    width: 100%;
+    max-height: 380px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.content {
+    overflow-wrap: anywhere;
+    line-height: 1.8;
+}
+
+.content p {
+    margin: 0 0 14px;
+}
+
+.content h2,
+.content h3 {
+    margin: 20px 0 12px;
+}
+
+.content ul {
+    list-style-type: disc;
+    padding-left: 28px;
+}
+
+.content ol {
+    list-style-type: decimal;
+    padding-left: 28px;
+}
+
+.content blockquote {
+    background: #f7f7f7;
+    border-left: 4px solid #999;
+    padding: 10px 18px;
+    margin: 18px 0;
+}
+
+.plain-content {
+    white-space: pre-wrap;
+}
+
 
         textarea {
             box-sizing: border-box;
@@ -113,6 +154,17 @@
 
                 <article class="post">
 
+<%-- Cover image submitted by the blog author --%>
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img
+        src="<c:out value='${blog.coverImageUrl}' />"
+        alt="Blog cover image"
+        class="review-cover"
+        loading="lazy">
+
+</c:if>
+
                     <h2><c:out value="${blog.title}" /></h2>
 
                     <p class="meta">
@@ -125,7 +177,26 @@
                         <c:out value="${blog.authorName}" />
                     </p>
 
-                    <div class="content"><c:out value="${blog.content}" /></div>
+                    
+<div class="content">
+
+    <c:choose>
+
+        <c:when test="${not empty blog.safeContentHtml}">
+            <c:out value="${blog.safeContentHtml}"
+                   escapeXml="false" />
+        </c:when>
+
+        <c:otherwise>
+            <div class="plain-content">
+                <c:out value="${blog.content}" />
+            </div>
+        </c:otherwise>
+
+    </c:choose>
+
+</div>
+
 
                     <hr>
 

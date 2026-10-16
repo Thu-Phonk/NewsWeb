@@ -3,6 +3,7 @@ package com.example.news.servlet;
 
 import com.example.news.util.BlogCollection;
 import com.example.news.util.RoleUtil;
+import com.example.news.util.RichTextUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Sorts;
@@ -69,7 +70,19 @@ public class BlogReviewServlet extends HttpServlet {
                         .sort(Sorts.ascending("createdAt"))
                         .limit(50)) {
 
-                pendingBlogs.add(blog);
+                
+String storedHtml = blog.getString("contentHtml");
+
+if (storedHtml != null && !storedHtml.isBlank()) {
+
+    String safeHtml =
+            RichTextUtil.sanitize(storedHtml);
+
+    blog.put("safeContentHtml", safeHtml);
+}
+
+pendingBlogs.add(blog);
+
             }
 
             request.setAttribute("pendingBlogs", pendingBlogs);

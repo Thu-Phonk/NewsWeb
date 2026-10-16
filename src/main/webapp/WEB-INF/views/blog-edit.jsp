@@ -109,6 +109,25 @@
     margin-bottom: 12px;
 }
 
+.preview-cover {
+    display: block;
+    width: 100%;
+    max-height: 350px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.preview-cover[hidden] {
+    display: none;
+}
+
+input[type="checkbox"] {
+    width: auto;
+    margin-right: 8px;
+}
+
     </style>
 </head>
 
@@ -123,8 +142,11 @@
         </p>
     </c:if>
 
-    <form action="${pageContext.request.contextPath}/blog/edit"
-          method="post">
+    
+<form action="${pageContext.request.contextPath}/blog/edit"
+      method="post"
+      enctype="multipart/form-data">
+
 
         <input type="hidden"
                name="id"
@@ -152,6 +174,28 @@
                value="<c:out value='${blog.category}' />"
                required>
 
+<label for="coverImage">Replace Cover Image (Optional)</label>
+
+<input type="file"
+       id="coverImage"
+       name="coverImage"
+       accept="image/jpeg,image/png">
+
+<p style="color:#666; font-size:13px;">
+    JPEG or PNG, maximum 5 MB.
+    Leave empty to keep the current image.
+</p>
+
+<c:if test="${not empty blog.coverImageUrl}">
+    <label>
+        <input type="checkbox"
+               id="removeCover"
+               name="removeCover"
+               value="true">
+        Remove the current cover image
+    </label>
+</c:if>
+
         <label for="content">Content</label>
         
 <!-- Plain-text compatibility -->
@@ -177,6 +221,23 @@
 <h2>Live Preview</h2>
 
 <section class="blog-preview">
+
+<%-- Display the cover already saved in MongoDB --%>
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img
+        id="existingCoverPreview"
+        src="<c:out value='${blog.coverImageUrl}' />"
+        alt="Current blog cover"
+        class="preview-cover">
+
+</c:if>
+
+<img id="coverPreview"
+     class="preview-cover"
+     alt="Replacement cover preview"
+     hidden>
+
     <h2 id="previewTitle">Your blog title</h2>
 
     <p id="previewCategory"
@@ -230,6 +291,10 @@
 
 <script
     src="${pageContext.request.contextPath}/js/blog-rich-editor.js?v=2"
+    defer></script>
+
+<script
+    src="${pageContext.request.contextPath}/js/edit-cover-preview.js?v=1"
     defer></script>
 
 </body>

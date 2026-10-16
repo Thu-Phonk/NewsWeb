@@ -4,6 +4,7 @@ package com.example.news.servlet;
 import com.example.news.user.UserCollection;
 import com.example.news.util.BlogCollection;
 import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
@@ -17,6 +18,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -25,8 +28,15 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
+
 @WebServlet("/blog/create")
+@MultipartConfig(
+    fileSizeThreshold = 0,
+    maxFileSize = 5L * 1024 * 1024,
+    maxRequestSize = 6L * 1024 * 1024
+)
 public class BlogCreateServlet extends HttpServlet {
+
 
     private static final Set<String> ALLOWED_ROLES =
             Set.of("guest", "subscriber", "writer",
@@ -195,6 +205,21 @@ if (saveDraft) {
                 return;
             }
 
+// Upload the optional blog cover image.
+CloudinaryImageUtil.UploadedImage coverImage;
+
+try {
+    Part imagePart = request.getPart("coverImage");
+
+    coverImage =
+            CloudinaryImageUtil.uploadCover(imagePart);
+
+} catch (IllegalArgumentException e) {
+
+    showError(request, response, e.getMessage());
+    return;
+}
+
             Document blog = new Document()
                     .append("title", title)
                     .append("category", category)
@@ -207,6 +232,19 @@ if (saveDraft) {
 
 if (safeHtml != null) {
     blog.append("contentHtml", safeHtml);
+}
+
+if (coverImage != null) {
+
+    blog.append(
+            "coverImageUrl",
+            coverImage.url()
+    );
+
+    blog.append(
+            "coverImagePublicId",
+            coverImage.publicId()
+    );
 }
 
             BlogCollection.getCollection().insertOne(blog);

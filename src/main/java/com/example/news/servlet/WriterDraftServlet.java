@@ -1,9 +1,9 @@
-
 package com.example.news.servlet;
 
 import com.example.news.util.EditorialCollection;
 import com.example.news.util.RoleUtil;
 import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
@@ -14,18 +14,24 @@ import org.bson.conversions.Bson;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Date;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @WebServlet("/writer/draft")
+@MultipartConfig(fileSizeThreshold = 0, maxFileSize = 5L * 1024 * 1024,
+        maxRequestSize = 6L * 1024 * 1024)
 public class WriterDraftServlet extends HttpServlet {
 
     private static final String TOKEN_KEY = "writerDraftCsrfToken";
@@ -57,7 +63,7 @@ public class WriterDraftServlet extends HttpServlet {
             Document draft = EditorialCollection.getCollection()
                     .find(Filters.and(
                             Filters.eq("_id", articleId),
-                            Filters.eq("authorId", user.getObjectId("_id")),
+                            Filters.eq("authorId", user.getObjectId("_id")),       
                             Filters.eq("status", "draft")
                     ))
                     .first();
@@ -100,6 +106,9 @@ request.setAttribute(
         request.setCharacterEncoding("UTF-8");
         response.setHeader("Cache-Control", "no-store");
 
+        CloudinaryImageUtil.UploadedImage newCover = null;
+        boolean savedInMongo = false;
+
         try {
             Document user = requireWriter(request, response);
             if (user == null) {
@@ -133,6 +142,20 @@ request.setAttribute(
                 return;
             }
 
+            // Load the complete persisted draft so failed form validation
+            // does not lose its existing cover image.
+            Document storedDraft = EditorialCollection.getCollection()
+                    .find(Filters.and(
+                            Filters.eq("_id", articleId),
+                            Filters.eq("authorId", user.getObjectId("_id")),
+                            Filters.eq("status", "draft")))
+                    .first();
+
+            if (storedDraft == null) {
+                response.sendError(404, "Draft no longer editable.");
+                return;
+            }
+
             String action = request.getParameter("action");
 
             boolean saveDraft = "draft".equals(action);
@@ -163,7 +186,7 @@ if (rawHtml != null && !rawHtml.isBlank()) {
 }
 
             // Preserve entered data if validation fails.
-            Document formDraft = new Document("_id", articleId)
+            Document formDraft = new Document(storedDraft)
                     .append("title", title)
                     .append("category", category)
                     .append("content", content);
@@ -208,6 +231,47 @@ Bson htmlUpdate = safeHtml == null
         ? Updates.unset("contentHtml")
         : Updates.set("contentHtml", safeHtml);
 
+            // No checkbox and no new file: keep the existing image.
+            boolean removeCover =
+                    "true".equals(request.getParameter("removeCover"));
+            Part coverPart;
+            try {
+                coverPart = request.getPart("coverImage");
+            } catch (IllegalStateException e) {
+                response.sendError(413, "Cover image is too large.");
+                return;
+            }
+            boolean replacing = coverPart != null && coverPart.getSize() > 0;
+            if (removeCover && replacing) {
+                response.sendError(400,
+                        "Choose either replacement or removal, not both.");
+                return;
+            }
+            if (replacing) {
+                try {
+                    newCover = CloudinaryImageUtil.uploadEditorialCover(coverPart);
+                } catch (IllegalArgumentException e) {
+                    response.sendError(400, e.getMessage());
+                    return;
+                }
+            }
+
+            String previousCoverId = storedDraft.getString("coverImagePublicId");
+            List<Bson> updates = new ArrayList<>();
+            updates.add(Updates.set("title", title));
+            updates.add(Updates.set("category", category));
+            updates.add(Updates.set("content", content));
+            updates.add(htmlUpdate);
+            updates.add(Updates.set("status", nextStatus));
+            updates.add(Updates.set("updatedAt", new Date()));
+            if (removeCover) {
+                updates.add(Updates.unset("coverImageUrl"));
+                updates.add(Updates.unset("coverImagePublicId"));
+            } else if (newCover != null) {
+                updates.add(Updates.set("coverImageUrl", newCover.url()));
+                updates.add(Updates.set("coverImagePublicId", newCover.publicId()));
+            }
+
             // Atomic ownership and status check:
             // cannot edit another author's or submitted article.
             long matched = EditorialCollection.getCollection()
@@ -218,17 +282,11 @@ Bson htmlUpdate = safeHtml == null
                                             "authorId",
                                             user.getObjectId("_id")
                                     ),
-                                    Filters.eq("status", "draft")
+                                    Filters.eq("status", "draft"),
+                                    Filters.eq("updatedAt", storedDraft.getDate("updatedAt"))
                             ),
-                            
-Updates.combine(
-        Updates.set("title", title),
-        Updates.set("category", category),
-        Updates.set("content", content),
-        htmlUpdate,
-        Updates.set("status", nextStatus),
-        Updates.set("updatedAt", new Date())
-)
+
+                            Updates.combine(updates)
 
                     )
                     .getMatchedCount();
@@ -238,6 +296,15 @@ Updates.combine(
                         404, "Draft not found or no longer editable."
                 );
                 return;
+            }
+
+            savedInMongo = true;
+            if ((removeCover || newCover != null) && previousCoverId != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(previousCoverId);
+                } catch (IOException cleanupError) {
+                    getServletContext().log("Old editorial cover cleanup failed.", cleanupError);
+                }
             }
 
             session.removeAttribute(TOKEN_KEY);
@@ -252,6 +319,14 @@ Updates.combine(
         } catch (Exception e) {
             getServletContext().log("Unable to update draft.", e);
             response.sendError(500, "Unable to update draft.");
+        } finally {
+            if (!savedInMongo && newCover != null) {
+                try {
+                    CloudinaryImageUtil.deleteEditorialCover(newCover.publicId());
+                } catch (IOException cleanupError) {
+                    getServletContext().log("Unused editorial cover cleanup failed.", cleanupError);
+                }
+            }
         }
     }
 

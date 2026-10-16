@@ -6,6 +6,7 @@ import com.example.news.util.BlogCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import com.example.news.util.RichTextUtil;
+import com.example.news.util.CloudinaryImageUtil;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
@@ -17,6 +18,8 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import jakarta.servlet.annotation.MultipartConfig;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,9 +27,18 @@ import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
+
 
 @WebServlet("/blog/edit")
+@MultipartConfig(
+    fileSizeThreshold = 0,
+    maxFileSize = 5L * 1024 * 1024,
+    maxRequestSize = 6L * 1024 * 1024
+)
 public class BlogEditServlet extends HttpServlet {
+
 
     private static final Set<String> ALLOWED_ROLES =
             Set.of("guest", "subscriber", "writer",
@@ -100,6 +112,7 @@ request.setAttribute(
     }
 
 
+
 @Override
 protected void doPost(
         HttpServletRequest request,
@@ -126,6 +139,7 @@ protected void doPost(
             !MessageDigest.isEqual(
                     expected.getBytes(StandardCharsets.UTF_8),
                     submitted.getBytes(StandardCharsets.UTF_8))) {
+
         response.sendError(403, "Invalid form token.");
         return;
     }
@@ -144,6 +158,9 @@ protected void doPost(
         response.sendError(400, "Invalid blog action.");
         return;
     }
+
+    CloudinaryImageUtil.UploadedImage newCover = null;
+    boolean databaseSaved = false;
 
     try {
         if (!isAuthorized(authorId)) {
@@ -183,6 +200,13 @@ protected void doPost(
             return;
         }
 
+        // Preserve current Cloudinary information.
+        String oldCoverId =
+                blog.getString("coverImagePublicId");
+
+        String oldCoverUrl =
+                blog.getString("coverImageUrl");
+
         String title = request.getParameter("title");
         String category = request.getParameter("category");
         String content = request.getParameter("content");
@@ -207,17 +231,18 @@ protected void doPost(
             content = RichTextUtil.toPlainText(safeHtml);
         }
 
-        // Restore entered values if validation fails.
-        blog.put("title", title);
-        blog.put("category", category);
-        blog.put("content", content);
-        blog.put("contentHtml", safeHtml);
+        // Restore the user's input on validation errors.
+        Document formBlog = new Document(blog);
+        formBlog.put("title", title);
+        formBlog.put("category", category);
+        formBlog.put("content", content);
+        formBlog.put("contentHtml", safeHtml);
 
         if (title.length() > 150
                 || category.length() > 60
                 || content.length() > 10000) {
 
-            showError(request, response, blog,
+            showError(request, response, formBlog,
                     "One or more fields are too long.");
             return;
         }
@@ -228,7 +253,7 @@ protected void doPost(
                     && category.isEmpty()
                     && content.isEmpty()) {
 
-                showError(request, response, blog,
+                showError(request, response, formBlog,
                         "A draft cannot be completely empty.");
                 return;
             }
@@ -239,44 +264,132 @@ protected void doPost(
                     || category.length() < 2
                     || content.length() < 10) {
 
-                showError(request, response, blog,
+                showError(request, response, formBlog,
                         "Title needs 3 characters, category "
                         + "needs 2, and content needs 10.");
                 return;
             }
         }
 
+        // Determine what to do with the cover image.
+        boolean removeCover =
+                "true".equals(request.getParameter("removeCover"));
+
+        Part imagePart;
+
+        try {
+            imagePart = request.getPart("coverImage");
+        } catch (IllegalStateException e) {
+            response.sendError(413, "Uploaded file is too large.");
+            return;
+        }
+
+        boolean hasNewImage =
+                imagePart != null && imagePart.getSize() > 0;
+
+        // Never process contradictory instructions.
+        if (removeCover && hasNewImage) {
+            showError(
+                    request, response, formBlog,
+                    "Choose either Replace or Remove Cover."
+            );
+            return;
+        }
+
+        // Upload new image only after validation has passed.
+        if (hasNewImage) {
+            try {
+                newCover =
+                        CloudinaryImageUtil.uploadCover(imagePart);
+
+            } catch (IllegalArgumentException e) {
+                showError(request, response, formBlog,
+                        e.getMessage());
+                return;
+            }
+        }
+
+        List<Bson> updates = new ArrayList<>();
+
+        updates.add(Updates.set("title", title));
+        updates.add(Updates.set("category", category));
+        updates.add(Updates.set("content", content));
+
+        if (safeHtml == null) {
+            updates.add(Updates.unset("contentHtml"));
+        } else {
+            updates.add(Updates.set("contentHtml", safeHtml));
+        }
+
+        // CASE 1: Remove the current image.
+        if (removeCover) {
+            updates.add(Updates.unset("coverImageUrl"));
+            updates.add(Updates.unset("coverImagePublicId"));
+        }
+
+        // CASE 2: Replace with a newly uploaded image.
+        else if (newCover != null) {
+            updates.add(
+                    Updates.set("coverImageUrl", newCover.url())
+            );
+            updates.add(
+                    Updates.set(
+                            "coverImagePublicId",
+                            newCover.publicId()
+                    )
+            );
+        }
+
+        // CASE 3: Neither selected.
+        // No image update is added, so the old cover remains.
+
         String nextStatus = saveDraft ? "draft" : "pending";
 
-        Bson htmlUpdate = safeHtml == null
-                ? Updates.unset("contentHtml")
-                : Updates.set("contentHtml", safeHtml);
+        updates.add(Updates.set("status", nextStatus));
+        updates.add(Updates.set("updatedAt", new Date()));
+        updates.add(Updates.unset("reviewedBy"));
+        updates.add(Updates.unset("reviewedAt"));
+        updates.add(Updates.unset("rejectionReason"));
 
-        var result = BlogCollection.getCollection()
+        long matched = BlogCollection.getCollection()
                 .updateOne(
                         Filters.and(
                                 Filters.eq("_id", blogId),
                                 Filters.eq("authorId", authorId),
-                                Filters.eq("status", currentStatus)
+                                Filters.eq("status", currentStatus),
+                                Filters.eq(
+                                        "updatedAt",
+                                        blog.getDate("updatedAt")
+                                )
                         ),
-                        Updates.combine(
-                                Updates.set("title", title),
-                                Updates.set("category", category),
-                                Updates.set("content", content),
-                                htmlUpdate,
-                                Updates.set("status", nextStatus),
-                                Updates.set("updatedAt", new Date()),
-                                Updates.unset("reviewedBy"),
-                                Updates.unset("reviewedAt"),
-                                Updates.unset("rejectionReason")
-                        )
-                );
+                        Updates.combine(updates)
+                )
+                .getMatchedCount();
 
-        if (result.getMatchedCount() != 1) {
+        if (matched != 1) {
             response.sendError(
-                    409, "Blog changed or is no longer editable."
+                    409, "Blog changed while you were editing."
             );
             return;
+        }
+
+        databaseSaved = true;
+
+        // The database now points to the correct image.
+        // Deleting the old image cannot affect the new cover.
+        if ((removeCover || newCover != null)
+                && oldCoverId != null
+                && !oldCoverId.isBlank()) {
+
+            try {
+                CloudinaryImageUtil.deleteCover(oldCoverId);
+
+            } catch (IOException e) {
+                getServletContext().log(
+                        "Old cover cleanup failed: " + oldCoverId,
+                        e
+                );
+            }
         }
 
         session.removeAttribute("blogEditCsrfToken");
@@ -290,7 +403,29 @@ protected void doPost(
 
     } catch (Exception e) {
         getServletContext().log("Blog editing failed.", e);
-        response.sendError(500, "Unable to update blog.");
+
+        if (!response.isCommitted()) {
+            response.sendError(500, "Unable to update blog.");
+        }
+
+    } finally {
+
+        // A successful Cloudinary upload followed by a failed
+        // database update must not leave an unused new image.
+        if (!databaseSaved && newCover != null) {
+
+            try {
+                CloudinaryImageUtil.deleteCover(
+                        newCover.publicId()
+                );
+
+            } catch (IOException e) {
+                getServletContext().log(
+                        "Failed to clean unused uploaded cover.",
+                        e
+                );
+            }
+        }
     }
 }
 

@@ -97,6 +97,17 @@
             display: inline-block;
             margin-bottom: 20px;
         }
+
+.blog-cover {
+    display: block;
+    width: 100%;
+    max-height: 380px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
     </style>
 </head>
 
@@ -147,6 +158,15 @@
 
                 <article class="blog-card">
 
+<c:if test="${not empty blog.coverImageUrl}">
+
+    <img src="<c:out value='${blog.coverImageUrl}' />"
+         alt="Blog cover image"
+         loading="lazy"
+         class="blog-cover">
+
+</c:if>
+
                     <h2>
                         <c:out value="${blog.title}" />
                     </h2>
@@ -181,6 +201,16 @@
 
 </div>
 
+
+<c:url var="blogViewUrl" value="/blog/view">
+    <c:param name="id" value="${blog._id}" />
+</c:url>
+
+<p>
+    <a href="${blogViewUrl}">
+        Read &amp; Comment
+    </a>
+</p>
 
                 </article>
 
